@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.0](https://github.com/Misoto22/ci/compare/v0.3.0...v0.4.0) (2026-09-17)
+
+
+### Features
+
+* **fleet:** require the verified CI checks and pr-title per repo ([#5](https://github.com/Misoto22/ci/issues/5)) ([db5255e](https://github.com/Misoto22/ci/commit/db5255e5cd45223aa0611f735445e015b4733490))
+
 ## [0.3.0](https://github.com/Misoto22/ci/compare/v0.2.0...v0.3.0) (2026-09-17)
 
 

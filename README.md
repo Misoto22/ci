@@ -67,6 +67,12 @@ caller passes it by name. So every consumer repository carries its own copy of:
 (`01 Personal Development` → `GitHub Release Bot App`). It is idempotent, so it
 is also the key-rotation procedure.
 
+**The fan-out was applied on 2026-09-17 to all 29 repositories in
+`fleet/repos.txt`** — 29 ok, 0 failed. A dry run now reports
+`APP_PRIVATE_KEY=present APP_CLIENT_ID=present` on every line, and that is what
+a rotation should look like before and after. Re-run it whenever the App key is
+rotated or a repository is added to `fleet/repos.txt`.
+
 The App itself is `misoto22-release-bot`, installed on the account with
 **All repositories** so it covers repositories created later. Its permissions
 are Metadata read, Contents read/write, Pull requests read/write and Issues
@@ -342,37 +348,80 @@ All three default to a dry run and take `--apply` to write.
 | Script | What it does |
 |---|---|
 | `scripts/fanout-release-bot.sh` | Reads the App private key and client ID from 1Password and sets `APP_PRIVATE_KEY` / `APP_CLIENT_ID` on every repository in `fleet/repos.txt`. Idempotent, so it is also the rotation procedure. Values never touch disk, the terminal or an argument list. Each `op` call has a 20-second watchdog, because GNU `timeout` is not installed on the machine this runs from. |
-| `scripts/apply-rulesets.sh` | Creates or updates a repository ruleset named `main` from `fleet/rulesets.json`: `~DEFAULT_BRANCH`, active, no bypass actors, blocking deletion and force-pushes, requiring a pull request (zero approvals — a solo account cannot approve its own PR) and requiring the listed status checks with a strict up-to-date policy. |
-| `scripts/enable-immutable-releases.sh` | Turns on immutable releases through `PUT /repos/{owner}/{repo}/immutable-releases`, which makes a published tag impossible to move or delete — [HAR-NAME-003] enforced by the platform rather than by discipline. |
+| `scripts/apply-rulesets.sh` | Creates or updates a repository ruleset named `main` from `fleet/rulesets.json`: `~DEFAULT_BRANCH`, active, blocking deletion and force-pushes, requiring a pull request (zero approvals — a solo account cannot approve its own PR) and requiring the listed status checks with a strict up-to-date policy. A create grants no bypass; an update keeps the bypass the repository already has unless `--reset-bypass` says otherwise. An entry marked `"skip": true` is reported and left untouched. |
+| `scripts/enable-immutable-releases.sh` | Turns on immutable releases through `PUT /repos/{owner}/{repo}/immutable-releases`, which makes a published tag impossible to move or delete — [HAR-NAME-003] enforced by the platform rather than by discipline. Repositories listed in `fleet/immutable-releases-exclude.txt` are reported as `SKIP` with their reason and never written to. |
 
-`fleet/rulesets.json` maps `owner/name` to `{ "checks": [...] }`. Seeded
-conservatively: only check names verified to actually run and pass are listed,
-everything else is `[]`, which still gets the pull-request, deletion and
-force-push rules. Verify a repository's real check names before adding them:
+`fleet/rulesets.json` maps `owner/name` to an entry with three possible keys:
+
+| Key | Meaning |
+|---|---|
+| `checks` | required status-check contexts; `[]` for none |
+| `skip` | `true` leaves the repository entirely alone |
+| `note` | why — printed as the reason on the `SKIP` line |
+
+**Every repository is seeded `"checks": []`**, which still gets the
+pull-request, deletion and force-push rules. A context goes in only once it has
+been seen reporting on a real pull request in that repository:
 
 ```bash
 gh api repos/Misoto22/<repo>/commits/<pr-head-sha>/check-runs --jq '.check_runs[].name'
 ```
+
+`misoto22-site` and `zhaojian` carry a `note` explaining why they stay empty
+although both have a green `ci.yml`: both workflows declare `paths-ignore`, so a
+docs-only pull request produces **no run at all**. A required context would then
+sit pending forever and block a merge that should have been trivial. Making
+those contexts required needs an always-reports job to hang them on, and that is
+decided in each repository's own release-bot pull request.
+
+`folio` and `skills` are `"skip": true`:
+
+- **`folio`** already runs a ruleset named `main` with three required contexts
+  and an admin bypass. The fleet default would be a downgrade, so folio's
+  protection moves with its release-please migration instead.
+- **`skills`** protects its default branch with its own ruleset, `Protect
+  default branch`. A second ruleset named `main` beside it would be a duplicate
+  gate on the same branch with nothing keeping the two in step.
 
 A ruleset is additive to any classic branch protection already in place; the
 most restrictive rule wins. It never weakens an existing gate, but it does start
 requiring a pull request where pushing to the default branch is the current
 habit.
 
-Updating an existing ruleset is a full replace, so a repository whose `main`
-ruleset already requires checks that `fleet/rulesets.json` does not list would
-lose them. `apply-rulesets.sh` fails closed on that: it refuses the repository
-and prints the contexts that would have gone, unless `--allow-check-removal`
-says the removal is intended. `folio` is the repository this already matters
-for — it is the only one with a ruleset named `main` today, and its three
-contexts are carried in the seed for exactly this reason. `skills` has one named
-`Protect default branch`, which this script leaves alone and adds a second,
-`main`, beside.
+Updating an existing ruleset is a **full replace** — of the rules and of the
+bypass list — and the script guards the two differently, because only one of
+them can be noticed after the fact:
+
+- **Required checks** that would be dropped are a fail-closed refusal: the
+  repository is skipped and the lost contexts printed, unless
+  `--allow-check-removal` says the removal is intended.
+- **`bypass_actors`** get no such warning, because a bypass that disappears
+  leaves nothing behind to compare against. So an update reads the repository's
+  current actors back and sends them again verbatim; only a create writes the
+  empty list. `--reset-bypass` is how to clear a bypass on purpose, and an
+  `--apply` that carried actors over says so on its `OK` line.
 
 Several repositories still use **classic** branch protection rather than a
 ruleset (`kioku`, `harness`, `touchstone`, `kioku-ui`, `polymarket-edge-lab`).
 Those contexts are seeded as `[]` here because the classic protection already
 enforces them; reconcile the two before treating the ruleset as the only gate.
+
+`fleet/immutable-releases-exclude.txt` is the equivalent list for
+`enable-immutable-releases.sh`: one `owner/name` per line with the reason after
+a `#`, reported as `SKIP` and never written to. A repository belongs there when
+one of its workflows attaches or replaces an asset on an **already-published**
+release, which is exactly what immutable releases block. Two do today:
+
+| Repository | Why |
+|---|---|
+| `career-ops` | `sbom.yml` runs on `release: published` and its whole job is a `gh release upload` back onto that release |
+| `skills` | `release.yml` takes a `gh release upload --clobber` branch whenever a release for the tag already exists — a re-run, a re-dispatch, any retry |
+
+The list is required rather than optional: a missing file is fatal, not an empty
+exclusion, because losing it would turn the setting on for precisely the
+repositories it breaks. `--exclude /dev/null` is the explicit way to exclude
+nothing. Delete an entry once its workflow attaches assets at creation time
+instead, which is the compatible shape.
 
 ## This repository's own CI
 
@@ -387,10 +436,10 @@ uvx yamllint@1.38.0 --strict .
 ```
 
 `.github/workflows/release-self.yml` calls this repository's own `release.yml`.
-**It fails until the fan-out has run**, because `APP_CLIENT_ID` and
-`APP_PRIVATE_KEY` do not exist here yet — which in turn waits on the
-`misoto22-release-bot` GitHub App being created. That red job is expected and
-does not block CI.
+It used to fail for want of a credential; since the fan-out on 2026-09-17 both
+`APP_CLIENT_ID` and `APP_PRIVATE_KEY` exist here, so a failure in that job is
+now a real one worth reading. It is a separate workflow and does not block `CI`
+either way.
 
 ## License
 

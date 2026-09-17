@@ -1,0 +1,17 @@
+# yamllint configuration for this repository.
+#
+# `truthy.check-keys: false` is mandatory for GitHub Actions: yamllint would
+# otherwise flag the `on:` key of every workflow as a stray boolean.
+
+extends: default
+
+rules:
+  line-length: disable
+  document-start: disable
+  truthy:
+    check-keys: false
+  comments:
+    min-spaces-from-content: 1
+  indentation:
+    spaces: 2
+    indent-sequences: consistent

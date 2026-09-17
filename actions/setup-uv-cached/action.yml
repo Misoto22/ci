@@ -1,0 +1,64 @@
+# Composite: install uv, pick a Python, restore the cache, install the project.
+#
+# For repositories that keep a bespoke workflow (kioku, misoto22-site) and only
+# want the repeated setup steps, not a whole job shape.
+#
+#   - uses: Misoto22/ci/actions/setup-uv-cached@<sha> # v0.1.0
+#     with:
+#       python-version: "3.13"
+#       enable-cache: "false"   # on a self-hosted runner
+
+name: Set up uv with caching
+description: Install uv, select a Python, optionally cache, and sync the project.
+
+inputs:
+  python-version:
+    description: Python version handed to setup-uv.
+    required: false
+    default: "3.13"
+  enable-cache:
+    description: >-
+      "true" or "false". A self-hosted runner MUST pass "false": that machine
+      already keeps a warm ~/.cache/uv between jobs, so actions/cache only adds
+      a multi-gigabyte upload per run against the 10 GB per-repository quota.
+    required: false
+    default: "true"
+  working-directory:
+    description: Directory holding pyproject.toml and uv.lock.
+    required: false
+    default: "."
+  install:
+    description: '"true" runs uv sync after the setup steps.'
+    required: false
+    default: "true"
+
+outputs:
+  uv-version:
+    description: The uv version that was installed.
+    value: ${{ steps.uv.outputs.uv-version }}
+  cache-hit:
+    description: Whether the uv cache was restored.
+    value: ${{ steps.uv.outputs.cache-hit }}
+
+runs:
+  using: composite
+  steps:
+    - name: Set up uv
+      id: uv
+      uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
+      with:
+        enable-cache: ${{ inputs.enable-cache }}
+        python-version: ${{ inputs.python-version }}
+        working-directory: ${{ inputs.working-directory }}
+
+    - name: Install dependencies
+      if: inputs.install == 'true'
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      run: |
+        if [ -f uv.lock ]; then
+          uv sync --frozen
+        else
+          echo "no uv.lock in $(pwd); resolving instead of installing the lock"
+          uv sync
+        fi

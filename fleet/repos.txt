@@ -1,0 +1,41 @@
+# Active Misoto22 repositories that take the release bot credentials.
+# One `owner/name` per line. Blank lines and `#` comments are ignored.
+#
+# Order is the fleet migration order from the CI/release plan: pilots first,
+# then services, then the batches. Adding a repository here is all that is
+# needed for scripts/fanout-release-bot.sh, scripts/apply-rulesets.sh (which
+# also needs an entry in fleet/rulesets.json) and
+# scripts/enable-immutable-releases.sh to pick it up.
+#
+# Deliberately absent: obsidian, claude-config, ghostty-config and the Misoto22
+# profile repository — they hold no releasable software.
+
+Misoto22/touchstone-hosted-probe
+Misoto22/kioku-ios
+Misoto22/kioku
+Misoto22/harness
+Misoto22/touchstone
+Misoto22/misoto22-site
+Misoto22/folio
+Misoto22/career-ops
+Misoto22/skills
+Misoto22/llm-gateway
+Misoto22/kioku-ui
+Misoto22/Shiplog
+Misoto22/trading-research
+Misoto22/ai-investment-research-workflow
+Misoto22/polymarket-edge-lab
+Misoto22/misoto22-admin-ios
+Misoto22/misoto22-admin
+Misoto22/portrait-lora-pipeline
+Misoto22/zhaojian
+Misoto22/eoi-points-calculator
+Misoto22/cvtailors
+Misoto22/slatecourt
+Misoto22/servo-map
+Misoto22/kairos
+Misoto22/kaisetsu-pipeline
+Misoto22/astra
+Misoto22/lumia-crystal-site
+Misoto22/erp-modern
+Misoto22/ci

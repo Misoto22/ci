@@ -1,0 +1,56 @@
+# This repository ships nothing but YAML and shell, so the gate is: does the
+# YAML parse, do the workflows type-check, and is the shell sane.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  actionlint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: actionlint
+        # Dependabot cannot update a docker:// reference, so bump this tag by
+        # hand. The same image and tag is what runs locally before a push:
+        #   docker run --rm -v "$PWD:/repo" -w /repo rhysd/actionlint:1.7.12 -color
+        uses: docker://rhysd/actionlint:1.7.12
+        with:
+          args: -color
+
+  shellcheck:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: shellcheck
+        # Preinstalled on the GitHub-hosted Ubuntu image.
+        run: |
+          shellcheck --version
+          shellcheck scripts/*.sh
+
+  yamllint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
+
+      - name: yamllint
+        run: uvx yamllint@1.38.0 --strict .

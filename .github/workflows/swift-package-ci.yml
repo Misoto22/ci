@@ -1,0 +1,50 @@
+# Reusable: SwiftPM build and test on Linux.
+#
+# Only the pure-logic SwiftPM package goes through here. SwiftUI, UIKit,
+# Combine, CoreData and HealthKit do not exist on Linux — anything that imports
+# them has to stay in the app target and be tested on macOS (a self-hosted Mac
+# runner, or a hosted macOS job restricted to tags). Splitting the logic into a
+# local package and running it here is what keeps the expensive macOS minutes
+# off every pull request.
+#
+# The container tag is pinned to a minor line rather than `latest` so a Swift
+# release cannot turn a green gate red overnight.
+#
+# Check name: "<caller job id> / swift-package-ci".
+
+name: Swift package CI (reusable)
+
+on:
+  workflow_call:
+    inputs:
+      package-path:
+        description: Directory containing Package.swift.
+        required: false
+        type: string
+        default: "."
+      swift-image:
+        description: Docker image the job runs in.
+        required: false
+        type: string
+        default: swift:6.3-noble
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  swift-package-ci:
+    runs-on: ubuntu-latest
+    container: ${{ inputs.swift-image }}
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Report the toolchain
+        run: swift --version
+
+      - name: Build
+        run: swift build --package-path "${{ inputs.package-path }}"
+
+      - name: Test
+        run: swift test --package-path "${{ inputs.package-path }}"

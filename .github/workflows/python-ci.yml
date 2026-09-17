@@ -1,0 +1,79 @@
+# Reusable: uv-based Python CI.
+#
+# Check name: "<caller job id> / python-ci".
+
+name: Python CI (reusable)
+
+on:
+  workflow_call:
+    inputs:
+      python-version:
+        description: Python version handed to setup-uv.
+        required: false
+        type: string
+        default: "3.13"
+      command:
+        description: The command that constitutes the gate.
+        required: false
+        type: string
+        default: uv run pytest -q
+      working-directory:
+        description: Directory the install and the command run in.
+        required: false
+        type: string
+        default: "."
+      runs-on:
+        description: >-
+          JSON array of runner labels, consumed with fromJSON so a caller can
+          pass either '["ubuntu-latest"]' or '["self-hosted", "linux", "x64"]'.
+          A reusable workflow cannot take a list input, hence the JSON string.
+        required: false
+        type: string
+        default: '["ubuntu-latest"]'
+      enable-uv-cache:
+        description: >-
+          Let setup-uv save and restore the uv cache through actions/cache.
+          Callers running on a self-hosted runner MUST pass false: that machine
+          already keeps a warm ~/.cache/uv between jobs, so the only thing the
+          cache action adds is uploading a multi-gigabyte archive on every run,
+          which burns the 10 GB per-repository Actions cache quota and evicts
+          everything else in it.
+        required: false
+        type: boolean
+        default: true
+
+concurrency:
+  # github.workflow is the caller's workflow name, so each caller gets its own
+  # lane. Superseded pull-request runs are cancelled; pushes to a branch that
+  # deploys or releases are left alone to finish.
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  python-ci:
+    runs-on: ${{ fromJSON(inputs.runs-on) }}
+    defaults:
+      run:
+        working-directory: ${{ inputs.working-directory }}
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
+        with:
+          enable-cache: ${{ inputs.enable-uv-cache }}
+          python-version: ${{ inputs.python-version }}
+          working-directory: ${{ inputs.working-directory }}
+
+      - name: Install dependencies
+        run: |
+          if [ -f uv.lock ]; then
+            uv sync --frozen
+          else
+            echo "no uv.lock in $(pwd); resolving instead of installing the lock"
+            uv sync
+          fi
+
+      - name: Run the gate
+        run: ${{ inputs.command }}

@@ -1,0 +1,71 @@
+# Reusable: stamp an already-built GHCR image with extra tags.
+#
+# The point is that `release: published` should not rebuild anything. The image
+# for that commit already exists (pushed as sha-<short>); this adds the semver
+# tags beside it by copying the manifest, which costs seconds and keeps the
+# digest — and therefore the provenance and the attestation — identical. A
+# rollback can then point KIOKU_IMAGE_TAG at a human-readable version instead of
+# a commit hash.
+#
+# `docker buildx imagetools create` works on the registry, so a multi-arch
+# manifest list is preserved rather than flattened to the runner's architecture.
+#
+# Check name: "<caller job id> / ghcr-retag".
+
+name: GHCR retag (reusable)
+
+on:
+  workflow_call:
+    inputs:
+      image:
+        description: Image without a tag, e.g. ghcr.io/misoto22/kioku.
+        required: true
+        type: string
+      source-tag:
+        description: Existing tag to copy from, e.g. sha-abc1234 or latest.
+        required: true
+        type: string
+      new-tags:
+        description: |
+          Newline-separated tags to add, e.g.
+            v1.2.3
+            1.2.3
+            1.2
+        required: true
+        type: string
+
+jobs:
+  ghcr-retag:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Log in to GHCR
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Copy the manifest onto each new tag
+        env:
+          IMAGE: ${{ inputs.image }}
+          SOURCE_TAG: ${{ inputs.source-tag }}
+          NEW_TAGS: ${{ inputs.new-tags }}
+        run: |
+          set -euo pipefail
+          # Registry paths are case-sensitive and must be lowercase; a repo
+          # named Shiplog would otherwise produce an invalid reference.
+          target_image=$(printf '%s' "$IMAGE" | tr '[:upper:]' '[:lower:]')
+          source_ref="${target_image}:${SOURCE_TAG}"
+          echo "source manifest: ${source_ref}"
+          docker buildx imagetools inspect "${source_ref}" --format '{{json .Manifest.Digest}}'
+          while IFS= read -r tag; do
+            tag=$(printf '%s' "$tag" | tr -d '[:space:]')
+            if [ -z "$tag" ]; then
+              continue
+            fi
+            echo "tagging ${target_image}:${tag}"
+            docker buildx imagetools create --tag "${target_image}:${tag}" "${source_ref}"
+          done <<< "$NEW_TAGS"

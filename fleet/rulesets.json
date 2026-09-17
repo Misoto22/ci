@@ -1,0 +1,101 @@
+{
+  "Misoto22/touchstone-hosted-probe": {
+    "checks": []
+  },
+  "Misoto22/kioku-ios": {
+    "checks": []
+  },
+  "Misoto22/kioku": {
+    "checks": []
+  },
+  "Misoto22/harness": {
+    "checks": []
+  },
+  "Misoto22/touchstone": {
+    "checks": []
+  },
+  "Misoto22/misoto22-site": {
+    "checks": [
+      "ci",
+      "just-check",
+      "docs"
+    ]
+  },
+  "Misoto22/folio": {
+    "checks": [
+      "verify / verify",
+      "browser / browser",
+      "changeset"
+    ]
+  },
+  "Misoto22/career-ops": {
+    "checks": []
+  },
+  "Misoto22/skills": {
+    "checks": []
+  },
+  "Misoto22/llm-gateway": {
+    "checks": []
+  },
+  "Misoto22/kioku-ui": {
+    "checks": []
+  },
+  "Misoto22/Shiplog": {
+    "checks": []
+  },
+  "Misoto22/trading-research": {
+    "checks": []
+  },
+  "Misoto22/ai-investment-research-workflow": {
+    "checks": []
+  },
+  "Misoto22/polymarket-edge-lab": {
+    "checks": []
+  },
+  "Misoto22/misoto22-admin-ios": {
+    "checks": []
+  },
+  "Misoto22/misoto22-admin": {
+    "checks": []
+  },
+  "Misoto22/portrait-lora-pipeline": {
+    "checks": []
+  },
+  "Misoto22/zhaojian": {
+    "checks": [
+      "API · pytest",
+      "Web · vitest + build",
+      "E2E · Playwright (smoke)"
+    ]
+  },
+  "Misoto22/eoi-points-calculator": {
+    "checks": []
+  },
+  "Misoto22/cvtailors": {
+    "checks": []
+  },
+  "Misoto22/slatecourt": {
+    "checks": []
+  },
+  "Misoto22/servo-map": {
+    "checks": []
+  },
+  "Misoto22/kairos": {
+    "checks": []
+  },
+  "Misoto22/kaisetsu-pipeline": {
+    "checks": []
+  },
+  "Misoto22/astra": {
+    "checks": []
+  },
+  "Misoto22/lumia-crystal-site": {
+    "checks": []
+  },
+  "Misoto22/erp-modern": {
+    "checks": []
+  },
+  "Misoto22/ci": {
+    "checks": []
+  }
+}

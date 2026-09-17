@@ -1,0 +1,34 @@
+# This repository releases itself with its own reusable workflow.
+#
+# The reusable workflow is .github/workflows/release.yml, so the caller cannot
+# share that filename — hence release-self.yml. The `./` reference is the
+# same-repository form and always resolves to the commit being run, which is
+# what we want here: consumers pin a SHA, this repository does not pin itself.
+#
+# This will fail until scripts/fanout-release-bot.sh has put APP_PRIVATE_KEY and
+# APP_CLIENT_ID on this repository, which in turn waits on the
+# misoto22-release-bot GitHub App being created. A red release job with
+# "Input required and not supplied: private-key" is the expected state until
+# then, and it does not block CI.
+
+name: Release
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  release:
+    uses: ./.github/workflows/release.yml
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+    with:
+      app-client-id: ${{ vars.APP_CLIENT_ID }}
+    secrets:
+      APP_PRIVATE_KEY: ${{ secrets.APP_PRIVATE_KEY }}

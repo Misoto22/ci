@@ -1,0 +1,173 @@
+# Reusable: release-please, driven by a GitHub App token.
+#
+# Why an App token and not GITHUB_TOKEN:
+#   Anything created with the default GITHUB_TOKEN — a tag, a release, a
+#   commit — deliberately does NOT trigger further workflow runs. That is a
+#   GitHub anti-recursion rule, not a release-please limitation. A fleet whose
+#   publish steps hang off `on: release: published` (PyPI, npm, GHCR retag,
+#   TestFlight) would therefore silently never publish. A token minted from the
+#   `misoto22-release-bot` GitHub App is a different identity, so the events it
+#   raises do start downstream workflows.
+#
+# The App token is minted per job, is scoped to the calling repository only,
+# expires after one hour and is revoked in a post step.
+#
+# Do NOT set X-GitHub-Api-Version anywhere in this workflow. Under API version
+# 2026-03-10 the pull-request payload no longer carries `merge_commit_sha`, so
+# release-please logs "Pull request should have been merged", creates no tag and
+# no release, and still exits 0 (googleapis/release-please#2898, open). The
+# "Verify the tag exists" step below is the fleet's defence against exactly that
+# failure mode: a green job with nothing to show for it.
+
+name: Release (reusable)
+
+on:
+  workflow_call:
+    inputs:
+      app-client-id:
+        description: >-
+          Client ID of the misoto22-release-bot GitHub App. Callers pass the
+          repository Actions variable APP_CLIENT_ID, which is a variable and not
+          a secret. A personal account has no account-level Actions secrets or
+          variables, so every consumer repository carries its own copy.
+        required: true
+        type: string
+      config-file:
+        description: Path to the release-please manifest config.
+        required: false
+        type: string
+        default: release-please-config.json
+      manifest-file:
+        description: Path to the release-please version manifest.
+        required: false
+        type: string
+        default: .release-please-manifest.json
+      target-branch:
+        description: >-
+          Branch the release PR is opened against. Override for repositories
+          whose default branch is not `main`.
+        required: false
+        type: string
+        default: main
+    secrets:
+      APP_PRIVATE_KEY:
+        description: >-
+          Full PEM of the misoto22-release-bot private key, as a repository
+          secret. Pass it by name; never rely on `secrets: inherit`, whose
+          behaviour on a personal account is undocumented.
+        required: true
+    outputs:
+      release_created:
+        description: "'true' when a root-component release was created."
+        value: ${{ jobs.release-please.outputs.release_created }}
+      releases_created:
+        description: "'true' when any release was created (manifest mode)."
+        value: ${{ jobs.release-please.outputs.releases_created }}
+      tag_name:
+        description: Tag of the root-component release, e.g. v1.2.3.
+        value: ${{ jobs.release-please.outputs.tag_name }}
+      version:
+        description: Full semver of the root-component release.
+        value: ${{ jobs.release-please.outputs.version }}
+      major:
+        description: Major component of the released version.
+        value: ${{ jobs.release-please.outputs.major }}
+      minor:
+        description: Minor component of the released version.
+        value: ${{ jobs.release-please.outputs.minor }}
+      patch:
+        description: Patch component of the released version.
+        value: ${{ jobs.release-please.outputs.patch }}
+      prs_created:
+        description: "'true' when a release PR was opened or updated."
+        value: ${{ jobs.release-please.outputs.prs_created }}
+      paths_released:
+        description: JSON array of the paths that were released.
+        value: ${{ jobs.release-please.outputs.paths_released }}
+      pr:
+        description: JSON object describing the release PR.
+        value: ${{ jobs.release-please.outputs.pr }}
+
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+    outputs:
+      release_created: ${{ steps.rp.outputs.release_created }}
+      releases_created: ${{ steps.rp.outputs.releases_created }}
+      tag_name: ${{ steps.rp.outputs.tag_name }}
+      version: ${{ steps.rp.outputs.version }}
+      major: ${{ steps.rp.outputs.major }}
+      minor: ${{ steps.rp.outputs.minor }}
+      patch: ${{ steps.rp.outputs.patch }}
+      prs_created: ${{ steps.rp.outputs.prs_created }}
+      paths_released: ${{ steps.rp.outputs.paths_released }}
+      pr: ${{ steps.rp.outputs.pr }}
+    steps:
+      - name: Mint a GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          client-id: ${{ inputs.app-client-id }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+          # No `repositories` / `owner`: the default scope is the calling
+          # repository, which is all release-please needs.
+
+      - name: Run release-please
+        id: rp
+        uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+          config-file: ${{ inputs.config-file }}
+          manifest-file: ${{ inputs.manifest-file }}
+          target-branch: ${{ inputs.target-branch }}
+
+      - name: Verify the tag exists
+        # Guard against googleapis/release-please#2898: the action reports a
+        # release, exits 0, and no tag was ever pushed. Every *tag_name output
+        # (root and per-path) is checked against the git ref API.
+        if: >-
+          steps.rp.outputs.release_created == 'true' ||
+          steps.rp.outputs.releases_created == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RP_OUTPUTS: ${{ toJSON(steps.rp.outputs) }}
+        run: |
+          set -euo pipefail
+          mapfile -t tags < <(
+            printf '%s' "$RP_OUTPUTS" |
+            jq -r '
+              to_entries[]
+              | select(.key == "tag_name" or (.key | endswith("--tag_name")))
+              | .value
+              | select(. != null and . != "")
+            '
+          )
+          if [ "${#tags[@]}" -eq 0 ]; then
+            echo "::error title=No tag reported::release-please says a release was created but exposed no tag_name output. See googleapis/release-please#2898."
+            exit 1
+          fi
+          missing=0
+          for tag in "${tags[@]}"; do
+            found=0
+            # The ref can lag the release by a beat; retry before failing.
+            for attempt in 1 2 3; do
+              if gh api "repos/${GITHUB_REPOSITORY}/git/ref/tags/${tag}" >/dev/null 2>&1; then
+                found=1
+                break
+              fi
+              if [ "$attempt" -lt 3 ]; then
+                sleep 5
+              fi
+            done
+            if [ "$found" -eq 1 ]; then
+              echo "ok: tag ${tag} exists in ${GITHUB_REPOSITORY}"
+            else
+              echo "::error title=Missing release tag::release-please reported release ${tag} but refs/tags/${tag} does not exist in ${GITHUB_REPOSITORY}. This is googleapis/release-please#2898 — check that nothing pins X-GitHub-Api-Version."
+              missing=1
+            fi
+          done
+          exit "$missing"

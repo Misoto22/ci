@@ -25,22 +25,33 @@
 # Turning this on is one-way in spirit: existing releases stay mutable, but new
 # ones cannot be retracted by moving a tag. Disable with the DELETE endpoint if
 # it ever has to be undone.
+#
+# Not every repository can take it. A workflow that attaches or replaces an
+# asset on an already-published release breaks the moment the setting is on, so
+# those repositories are listed in fleet/immutable-releases-exclude.txt with
+# their reason and reported as SKIP. The list is required: losing it would turn
+# the setting on for exactly the repositories it breaks, so a missing file is
+# fatal rather than an empty exclusion.
 
 set -euo pipefail
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(dirname -- "$SCRIPT_DIR")"
 REPOS_FILE="${REPO_ROOT}/fleet/repos.txt"
+EXCLUDE_FILE="${REPO_ROOT}/fleet/immutable-releases-exclude.txt"
 APPLY=0
 
 usage() {
   cat <<'USAGE'
-Usage: enable-immutable-releases.sh [--apply] [--repos FILE]
+Usage: enable-immutable-releases.sh [--apply] [--repos FILE] [--exclude FILE]
 
-  --apply        Enable immutable releases. Without it the script only reports
-                 the current state of each repository.
-  --repos FILE   Repository list to use instead of fleet/repos.txt.
-  -h, --help     This text.
+  --apply         Enable immutable releases. Without it the script only reports
+                  the current state of each repository.
+  --repos FILE    Repository list to use instead of fleet/repos.txt.
+  --exclude FILE  Exclusion list to use instead of
+                  fleet/immutable-releases-exclude.txt. Pass /dev/null to
+                  exclude nothing.
+  -h, --help      This text.
 USAGE
 }
 
@@ -49,6 +60,7 @@ while [ $# -gt 0 ]; do
     --apply) APPLY=1 ;;
     --dry-run) APPLY=0 ;;
     --repos) shift; REPOS_FILE="${1:?--repos needs a path}" ;;
+    --exclude) shift; EXCLUDE_FILE="${1:?--exclude needs a path}" ;;
     -h|--help) usage; exit 0 ;;
     *) printf 'unknown argument: %s\n' "$1" >&2; usage >&2; exit 2 ;;
   esac
@@ -65,12 +77,41 @@ if [ ! -f "$REPOS_FILE" ]; then
   exit 1
 fi
 
+if [ ! -e "$EXCLUDE_FILE" ]; then
+  printf 'FATAL  exclusion list not found: %s\n' "$EXCLUDE_FILE" >&2
+  printf '       Pass --exclude /dev/null to exclude nothing on purpose.\n' >&2
+  exit 1
+fi
+
+# The reason this repository is excluded, or nothing at all when it is not.
+# A line is `owner/name` with the reason after a `#`; a whole-line comment
+# carries no repository name and so can never match.
+exclude_reason() {
+  awk -v want="$1" '
+    {
+      name = $0
+      sub(/#.*/, "", name)
+      gsub(/[[:space:]]/, "", name)
+      if (name == "" || name != want) next
+      reason = ""
+      if (index($0, "#") > 0) {
+        reason = substr($0, index($0, "#") + 1)
+        sub(/^[[:space:]]+/, "", reason)
+        sub(/[[:space:]]+$/, "", reason)
+      }
+      print (reason == "" ? "no reason given" : reason)
+      exit
+    }
+  ' "$EXCLUDE_FILE"
+}
+
 if [ "$APPLY" -eq 1 ]; then
   printf 'MODE   apply\n'
 else
   printf 'MODE   dry-run (pass --apply to write)\n'
 fi
-printf 'LIST   %s\n\n' "$REPOS_FILE"
+printf 'LIST   %s\n' "$REPOS_FILE"
+printf 'SKIPS  %s\n\n' "$EXCLUDE_FILE"
 
 ok=0
 failed=0
@@ -78,6 +119,13 @@ while IFS= read -r line || [ -n "$line" ]; do
   repo="${line%%#*}"
   repo="$(printf '%s' "$repo" | tr -d '[:space:]')"
   [ -z "$repo" ] && continue
+
+  reason="$(exclude_reason "$repo")"
+  if [ -n "$reason" ]; then
+    printf 'SKIP   %-45s excluded: %s\n' "$repo" "$reason"
+    ok=$((ok + 1))
+    continue
+  fi
 
   state="$(gh api "repos/${repo}/immutable-releases" --jq '.enabled' 2>/dev/null)" || state=""
   if [ -z "$state" ]; then

@@ -121,7 +121,7 @@ preflight_item() {
 # Print one field value on stdout. --format json keeps a multi-line PEM intact;
 # the bare --fields renderer is not safe for multi-line values.
 read_field() {
-  local label="$1" rc=0 raw
+  local label="$1" rc=0 raw value
   raw="$(guarded op item get "$OP_ITEM" --vault "$OP_VAULT" \
            --fields "label=${label}" --reveal --format json)" || rc=$?
   if [ "$rc" -ne 0 ]; then
@@ -129,7 +129,19 @@ read_field() {
       "$label" "$OP_ITEM" "$rc" >&2
     return 1
   fi
-  printf '%s' "$raw" | jq -er 'if type == "array" then .[0].value else .value end'
+  # jq's parse diagnostics describe the input they choked on, and that input is
+  # the credential: jq 1.8 reports only a line and column, but older builds
+  # quote the offending fragment, and even the column leaks the value's shape.
+  # So discard jq's stderr and say what happened in a fixed sentence instead.
+  if ! value="$(printf '%s' "$raw" |
+                jq -er 'if type == "array" then .[0].value else .value end' \
+                  2>/dev/null)"; then
+    printf 'FATAL  field "%s" came back from 1Password in an unexpected shape\n' \
+      "$label" >&2
+    printf '       The response is not printed: it may carry the credential.\n' >&2
+    return 1
+  fi
+  printf '%s' "$value"
 }
 
 # BSD base64 on older macOS spells the decode flag -D; GNU and current macOS

@@ -1,0 +1,15 @@
+# Repositories that must NOT have immutable releases turned on yet.
+#
+# One `owner/name` per line, with the reason after a `#` on the same line.
+# Blank lines and whole-line comments are ignored, and
+# scripts/enable-immutable-releases.sh prints a SKIP with the reason for every
+# entry it finds here.
+#
+# A repository belongs here when one of its workflows attaches or replaces an
+# asset on a release that is already published. Immutable releases block exactly
+# that, so the workflow would start failing the moment the setting goes on.
+# Delete the entry once the workflow attaches its assets at creation time
+# instead — that shape is compatible.
+
+Misoto22/career-ops # .github/workflows/sbom.yml runs on `release: published` and its whole job is `gh release upload` back onto that release
+Misoto22/skills # .github/workflows/release.yml takes a `gh release upload --clobber` branch whenever a release for the tag already exists: a re-run, a re-dispatch or a retry

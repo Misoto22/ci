@@ -15,24 +15,19 @@
     "checks": []
   },
   "Misoto22/misoto22-site": {
-    "checks": [
-      "ci",
-      "just-check",
-      "docs"
-    ]
+    "checks": [],
+    "note": "No required context yet: .github/workflows/ci.yml carries paths-ignore (content/, docs/, public/, **.md, .gitignore, LICENSE) on both push and pull_request, so a docs-only pull request produces no CI run at all and a required check would sit pending forever and block the merge. The contexts get decided in this repository's own release-bot pull request, together with whatever always-reports job carries them."
   },
   "Misoto22/folio": {
-    "checks": [
-      "verify / verify",
-      "browser / browser",
-      "changeset"
-    ]
+    "skip": true,
+    "note": "Left alone: folio already runs a ruleset named main with three required contexts and an admin bypass (RepositoryRole 5). Replacing it from the fleet default would be a net loss, so its branch protection moves with its release-please migration instead."
   },
   "Misoto22/career-ops": {
     "checks": []
   },
   "Misoto22/skills": {
-    "checks": []
+    "skip": true,
+    "note": "Left alone: skills protects its default branch with its own ruleset, 'Protect default branch'. A second ruleset named main would be a duplicate gate on the same branch with nothing to keep the two in step."
   },
   "Misoto22/llm-gateway": {
     "checks": []
@@ -62,11 +57,8 @@
     "checks": []
   },
   "Misoto22/zhaojian": {
-    "checks": [
-      "API · pytest",
-      "Web · vitest + build",
-      "E2E · Playwright (smoke)"
-    ]
+    "checks": [],
+    "note": "No required context yet: .github/workflows/ci.yml carries paths-ignore (**.md, docs/, LICENSE, .gitignore) on both push and pull_request, so a docs-only pull request produces no CI run at all and a required check would sit pending forever and block the merge. The contexts get decided in this repository's own release-bot pull request, together with whatever always-reports job carries them."
   },
   "Misoto22/eoi-points-calculator": {
     "checks": []

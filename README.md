@@ -383,6 +383,16 @@ adds the caller never produces the context, and it only appears on the next pull
 request opened after that merge. Those entries carry a `"pr-title not yet
 reported"` note so a later pass can add them without re-deriving the reason.
 
+Condition 1 is about the workflow that will be on the default branch when the
+ruleset is applied, not only the one there now. A context that is unconditional
+today and conditional after a pull request already in flight is not safe to
+require: `Shiplog`'s `Verify` gets `paths-ignore` in its open release-bot pull
+request, and the `rules` context on `misoto22-admin` and `misoto22-admin-ios`
+comes from a harness-rendered workflow whose template
+([harness#33](https://github.com/Misoto22/harness/pull/33)) now carries `paths:`
+and reaches those repositories at their next `misoto-harness sync --apply`. All
+three stay `[]` with a note saying what to re-survey and when.
+
 Condition 3 is why `lumia-crystal-site` requires only `pr-title / pr-title`
 although `lint-and-build` is unconditional: the build reads two
 `NEXT_PUBLIC_SHOPIFY_*` repository secrets, which a Dependabot run never

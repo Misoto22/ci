@@ -48,10 +48,8 @@
     "note": "Classic branch protection owns main here and already requires check, build, accessibility and consumers. Reconcile the two before moving the contexts into this ruleset."
   },
   "Misoto22/Shiplog": {
-    "checks": [
-      "Verify"
-    ],
-    "note": "pr-title not yet reported: this repository has no pr-title caller workflow. Add the context once one exists and has reported."
+    "checks": [],
+    "note": "No required context yet: Verify is unconditional on main today, but Shiplog pull request #4 adds paths-ignore (**.md, docs/**, LICENSE, .gitignore) to both triggers of ci.yml to cap hosted macOS minutes, so a docs-only pull request will produce no run and a required Verify would sit pending forever. That pull request says so itself. There is no pr-title caller here either; add that context once one exists and has reported."
   },
   "Misoto22/trading-research": {
     "checks": [
@@ -70,16 +68,12 @@
     "note": "Classic branch protection owns main here and already requires 'format, lint, types, tests (Python 3.14)' and pr-title / pr-title. Reconcile the two before moving the contexts into this ruleset."
   },
   "Misoto22/misoto22-admin-ios": {
-    "checks": [
-      "rules"
-    ],
-    "note": "pr-title not yet reported: this repository has no pr-title caller workflow. `rules` comes from the harness-generated misoto-harness.yml, which runs unconditionally on every pull request."
+    "checks": [],
+    "note": "No required context yet: the only one is `rules`, from the harness-rendered misoto-harness.yml (version=0.2.15), which is unconditional in the copy committed here but conditional in what harness renders now — Misoto22/harness pull request #33 restricted the template's pull_request and push triggers to the paths the drift check reads (.rulesync/**, rulesync.jsonc, rulesync.lock.json, the root and nested AGENTS.md / CLAUDE.md / GEMINI.md, .cursor/rules/**, and the workflow file itself). This repository picks that up at its next `misoto-harness sync --apply`, after which `rules` no longer reports on every pull request. Re-survey then. There is no pr-title caller here either."
   },
   "Misoto22/misoto22-admin": {
-    "checks": [
-      "rules"
-    ],
-    "note": "pr-title not yet reported: this repository has no pr-title caller workflow. `rules` comes from the harness-generated misoto-harness.yml, which runs unconditionally on every pull request."
+    "checks": [],
+    "note": "No required context yet: the only one is `rules`, from the harness-rendered misoto-harness.yml (version=0.2.15), which is unconditional in the copy committed here but conditional in what harness renders now — Misoto22/harness pull request #33 restricted the template's pull_request and push triggers to the paths the drift check reads. This repository picks that up at its next `misoto-harness sync --apply`. A node CI job is also planned here, which would add an unconditional context worth requiring; re-survey once both have landed. There is no pr-title caller here either."
   },
   "Misoto22/portrait-lora-pipeline": {
     "checks": [

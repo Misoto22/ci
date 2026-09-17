@@ -116,11 +116,17 @@ build_payload() {
         [
           { type: "deletion" },
           { type: "non_fast_forward" },
+          # All five parameters are required by the schema, not just the ones
+          # being set to something interesting. Sending a subset is rejected
+          # with `Invalid property /rules/2: data matches no possible input`,
+          # which names the array index and not the missing field.
           { type: "pull_request",
             parameters: {
               required_approving_review_count: 0,
               dismiss_stale_reviews_on_push: false,
-              require_last_push_approval: false
+              require_code_owner_review: false,
+              require_last_push_approval: false,
+              required_review_thread_resolution: false
             }
           }
         ]
@@ -280,13 +286,17 @@ while IFS= read -r repo; do
     kept=" (kept $(printf '%s' "$bypass_json" | jq 'length') bypass actor(s))"
   fi
 
-  if printf '%s' "$payload" |
-     gh api --method "$method" "$endpoint" --input - >/dev/null 2>&1; then
+  # Keep what the API said. A bare "rejected" turns a schema mistake into 27
+  # identical lines that name no cause; the payload is branch configuration and
+  # carries nothing secret, so the message is safe to print.
+  if error="$(printf '%s' "$payload" |
+              gh api --method "$method" "$endpoint" --input - 2>&1 >/dev/null)"; then
     printf 'OK     %-45s %sd ruleset "%s"%s\n' \
       "$repo" "$action" "$RULESET_NAME" "$kept"
     ok=$((ok + 1))
   else
     printf 'FAIL   %-45s %s %s rejected\n' "$repo" "$method" "$endpoint"
+    printf '       %s\n' "$(printf '%s' "$error" | tr '\n' ' ' | tr -s ' ')"
     failed=$((failed + 1))
   fi
 done < <(jq -r 'keys_unsorted[]' "$RULESETS_FILE")

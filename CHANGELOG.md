@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.3.0](https://github.com/Misoto22/ci/compare/v0.2.0...v0.3.0) (2026-09-17)
+
+
+### Features
+
+* **fleet:** preserve ruleset bypass actors and add skip lists ([#2](https://github.com/Misoto22/ci/issues/2)) ([d11f070](https://github.com/Misoto22/ci/commit/d11f070f9fd5c84febb2740a708e72f9de89f2f2))
+
+
+### Bug Fixes
+
+* **fleet:** send all five pull_request rule parameters ([#4](https://github.com/Misoto22/ci/issues/4)) ([19f6905](https://github.com/Misoto22/ci/commit/19f69050fb8f1aaa0945540a08dcfb34f3c4a143))
+
 ## [0.2.0](https://github.com/Misoto22/ci/compare/v0.1.0...v0.2.0) (2026-09-17)
 
 

@@ -359,13 +359,46 @@ All three default to a dry run and take `--apply` to write.
 | `skip` | `true` leaves the repository entirely alone |
 | `note` | why — printed as the reason on the `SKIP` line |
 
-**Every repository is seeded `"checks": []`**, which still gets the
-pull-request, deletion and force-push rules. A context goes in only once it has
-been seen reporting on a real pull request in that repository:
+An entry with `"checks": []` still gets the pull-request, deletion and
+force-push rules. A context goes in only once all three of these hold:
+
+1. the workflow makes it **unconditional** on a pull request — no `paths` or
+   `paths-ignore` on the `pull_request` trigger, and no job-level `if:` that can
+   skip the whole job on an ordinary pull request;
+2. a check run with exactly that name has **already reported** on a recent pull
+   request in that repository;
+3. it is **green** there for reasons the pull request controls — never a context
+   that is red for a pre-existing reason.
 
 ```bash
-gh api repos/Misoto22/<repo>/commits/<pr-head-sha>/check-runs --jq '.check_runs[].name'
+gh pr list --repo Misoto22/<repo> --state all --limit 3 --json headRefOid
+gh api repos/Misoto22/<repo>/commits/<pr-head-sha>/check-runs \
+  --jq '.check_runs[] | {name, app: .app.slug, conclusion}'
 ```
+
+Condition 2 is why `pr-title / pr-title` is absent from several repositories
+that already carry `.github/workflows/pr-title.yml`: a `pull_request_target`
+workflow runs the definition from the **base** branch, so the pull request that
+adds the caller never produces the context, and it only appears on the next pull
+request opened after that merge. Those entries carry a `"pr-title not yet
+reported"` note so a later pass can add them without re-deriving the reason.
+
+Condition 1 is about the workflow that will be on the default branch when the
+ruleset is applied, not only the one there now. A context that is unconditional
+today and conditional after a pull request already in flight is not safe to
+require: `Shiplog`'s `Verify` gets `paths-ignore` in its open release-bot pull
+request, and the `rules` context on `misoto22-admin` and `misoto22-admin-ios`
+comes from a harness-rendered workflow whose template
+([harness#33](https://github.com/Misoto22/harness/pull/33)) now carries `paths:`
+and reaches those repositories at their next `misoto-harness sync --apply`. All
+three stay `[]` with a note saying what to re-survey and when.
+
+Condition 3 is why `lumia-crystal-site` requires only `pr-title / pr-title`
+although `lint-and-build` is unconditional: the build reads two
+`NEXT_PUBLIC_SHOPIFY_*` repository secrets, which a Dependabot run never
+receives, so it fails every Dependabot pull request while passing an ordinary
+one. `career-ops` is empty for the same class of reason — its `test` job is red
+on `main`, not on any one pull request.
 
 `misoto22-site` and `zhaojian` carry a `note` explaining why they stay empty
 although both have a green `ci.yml`: both workflows declare `paths-ignore`, so a
@@ -404,7 +437,17 @@ them can be noticed after the fact:
 Several repositories still use **classic** branch protection rather than a
 ruleset (`kioku`, `harness`, `touchstone`, `kioku-ui`, `polymarket-edge-lab`).
 Those contexts are seeded as `[]` here because the classic protection already
-enforces them; reconcile the two before treating the ruleset as the only gate.
+enforces them; each entry's `note` records what that protection requires today,
+and the two need reconciling before the ruleset is treated as the only gate. A
+context is added there with the classic endpoint, not this script:
+
+```bash
+gh api repos/Misoto22/<repo>/branches/main/protection/required_status_checks \
+  --jq '{strict, checks}' > before.json
+# add the one context, keeping every existing entry and its app_id
+gh api -X PATCH repos/Misoto22/<repo>/branches/main/protection/required_status_checks \
+  --input after.json
+```
 
 `fleet/immutable-releases-exclude.txt` is the equivalent list for
 `enable-immutable-releases.sh`: one `owner/name` per line with the reason after

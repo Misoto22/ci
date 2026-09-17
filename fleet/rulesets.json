@@ -1,93 +1,159 @@
 {
   "Misoto22/touchstone-hosted-probe": {
-    "checks": []
+    "checks": [
+      "test",
+      "pr-title / pr-title"
+    ]
   },
   "Misoto22/kioku-ios": {
-    "checks": []
+    "checks": [],
+    "note": "No required context: the only workflow is testflight.yml, which triggers on push to main and workflow_dispatch. Nothing runs on a pull request, and the repository has never had one."
   },
   "Misoto22/kioku": {
-    "checks": []
+    "checks": [],
+    "note": "Classic branch protection owns main here and already requires check, Console and docs. Reconcile the two before moving the contexts into this ruleset."
   },
   "Misoto22/harness": {
-    "checks": []
+    "checks": [],
+    "note": "Classic branch protection owns main here and already requires secrets, verify (ubuntu-latest) and pr-title / pr-title. Reconcile the two before moving the contexts into this ruleset."
   },
   "Misoto22/touchstone": {
-    "checks": []
+    "checks": [],
+    "note": "Classic branch protection owns main here and already requires Python 3.12, Python 3.13, Distribution and pr-title / pr-title. Reconcile the two before moving the contexts into this ruleset."
   },
   "Misoto22/misoto22-site": {
     "checks": [],
-    "note": "No required context yet: .github/workflows/ci.yml carries paths-ignore (content/, docs/, public/, **.md, .gitignore, LICENSE) on both push and pull_request, so a docs-only pull request produces no CI run at all and a required check would sit pending forever and block the merge. The contexts get decided in this repository's own release-bot pull request, together with whatever always-reports job carries them."
+    "note": "No required context yet: .github/workflows/ci.yml carries paths-ignore (content/, docs/, public/, **.md, .gitignore, LICENSE) on both push and pull_request, so a docs-only pull request produces no CI run at all and a required check would sit pending forever and block the merge. There is no pr-title caller here either. The contexts get decided in this repository's own release-bot pull request, together with whatever always-reports job carries them."
   },
   "Misoto22/folio": {
     "skip": true,
     "note": "Left alone: folio already runs a ruleset named main with three required contexts and an admin bypass (RepositoryRole 5). Replacing it from the fleet default would be a net loss, so its branch protection moves with its release-please migration instead."
   },
   "Misoto22/career-ops": {
-    "checks": []
+    "checks": [],
+    "note": "No required context yet: test is the only unconditional pull_request job and it is red for a pre-existing reason (node test-all.mjs --quick fails on main, not on any one pull request). label and welcome are pull_request_target-only and welcome fires on `opened` alone, so neither reports on every pull request. pr-title has not reported yet — .github/workflows/pr-title.yml is on main but no pull request has been opened since it landed."
   },
   "Misoto22/skills": {
     "skip": true,
     "note": "Left alone: skills protects its default branch with its own ruleset, 'Protect default branch'. A second ruleset named main would be a duplicate gate on the same branch with nothing to keep the two in step."
   },
   "Misoto22/llm-gateway": {
-    "checks": []
+    "checks": [
+      "check",
+      "pr-title / pr-title"
+    ]
   },
   "Misoto22/kioku-ui": {
-    "checks": []
+    "checks": [],
+    "note": "Classic branch protection owns main here and already requires check, build, accessibility and consumers. Reconcile the two before moving the contexts into this ruleset."
   },
   "Misoto22/Shiplog": {
-    "checks": []
+    "checks": [],
+    "note": "No required context yet: Verify is unconditional on main today, but Shiplog pull request #4 adds paths-ignore (**.md, docs/**, LICENSE, .gitignore) to both triggers of ci.yml to cap hosted macOS minutes, so a docs-only pull request will produce no run and a required Verify would sit pending forever. That pull request says so itself. There is no pr-title caller here either; add that context once one exists and has reported."
   },
   "Misoto22/trading-research": {
-    "checks": []
+    "checks": [
+      "verify",
+      "pr-title / pr-title"
+    ]
   },
   "Misoto22/ai-investment-research-workflow": {
-    "checks": []
+    "checks": [
+      "test"
+    ],
+    "note": "pr-title not yet reported: .github/workflows/pr-title.yml is on main but no pull request has been opened since it landed, so the context does not exist yet. Add it on the next pass."
   },
   "Misoto22/polymarket-edge-lab": {
-    "checks": []
+    "checks": [],
+    "note": "Classic branch protection owns main here and already requires 'format, lint, types, tests (Python 3.14)' and pr-title / pr-title. Reconcile the two before moving the contexts into this ruleset."
   },
   "Misoto22/misoto22-admin-ios": {
-    "checks": []
+    "checks": [],
+    "note": "No required context yet: the only one is `rules`, from the harness-rendered misoto-harness.yml (version=0.2.15), which is unconditional in the copy committed here but conditional in what harness renders now — Misoto22/harness pull request #33 restricted the template's pull_request and push triggers to the paths the drift check reads (.rulesync/**, rulesync.jsonc, rulesync.lock.json, the root and nested AGENTS.md / CLAUDE.md / GEMINI.md, .cursor/rules/**, and the workflow file itself). This repository picks that up at its next `misoto-harness sync --apply`, after which `rules` no longer reports on every pull request. Re-survey then. There is no pr-title caller here either."
   },
   "Misoto22/misoto22-admin": {
-    "checks": []
+    "checks": [],
+    "note": "No required context yet: the only one is `rules`, from the harness-rendered misoto-harness.yml (version=0.2.15), which is unconditional in the copy committed here but conditional in what harness renders now — Misoto22/harness pull request #33 restricted the template's pull_request and push triggers to the paths the drift check reads. This repository picks that up at its next `misoto-harness sync --apply`. A node CI job is also planned here, which would add an unconditional context worth requiring; re-survey once both have landed. There is no pr-title caller here either."
   },
   "Misoto22/portrait-lora-pipeline": {
-    "checks": []
+    "checks": [
+      "Core (ubuntu-latest)",
+      "Core (windows-latest)",
+      "body-and-verification",
+      "review-resolution",
+      "pr-title / pr-title"
+    ]
   },
   "Misoto22/zhaojian": {
     "checks": [],
-    "note": "No required context yet: .github/workflows/ci.yml carries paths-ignore (**.md, docs/, LICENSE, .gitignore) on both push and pull_request, so a docs-only pull request produces no CI run at all and a required check would sit pending forever and block the merge. The contexts get decided in this repository's own release-bot pull request, together with whatever always-reports job carries them."
+    "note": "No required context yet: .github/workflows/ci.yml carries paths-ignore (**.md, docs/, LICENSE, .gitignore) on both push and pull_request, so a docs-only pull request produces no CI run at all and a required check would sit pending forever and block the merge. There is no pr-title caller here either. The contexts get decided in this repository's own release-bot pull request, together with whatever always-reports job carries them."
   },
   "Misoto22/eoi-points-calculator": {
-    "checks": []
+    "checks": [
+      "verify",
+      "deploy",
+      "pr-title / pr-title"
+    ],
+    "note": "deploy carries no job-level if: — it runs on every pull request and its first step no-ops with a step summary when the three Vercel secrets are absent, which is why it is green on Dependabot pull requests too."
   },
   "Misoto22/cvtailors": {
-    "checks": []
+    "checks": [
+      "rust",
+      "frontend",
+      "pr-title / pr-title"
+    ]
   },
   "Misoto22/slatecourt": {
-    "checks": []
+    "checks": [
+      "changes"
+    ],
+    "note": "changes is the only unconditional job: api, web and contract are gated on its dorny/paths-filter outputs, e2e needs web, deploy is push-only, and ios.yml is paths-filtered to apps/ios. pr-title not yet reported — there is no pr-title caller workflow."
   },
   "Misoto22/servo-map": {
-    "checks": []
+    "checks": [
+      "Typecheck",
+      "Lint",
+      "Test",
+      "Build Web"
+    ],
+    "note": "pr-title not yet reported: this repository has no pr-title caller workflow."
   },
   "Misoto22/kairos": {
-    "checks": []
+    "checks": [
+      "Backend (ruff + pytest)",
+      "Frontend (lint + vitest)",
+      "pr-title / pr-title"
+    ],
+    "note": "docs.yml is paths-filtered (docs/, mkdocs.yml, docs.sh, start.sh, Makefile, its own workflow file), so Build MkDocs and Lint docs.sh do not report on every pull request and Deploy to GitHub Pages is push-to-main only."
   },
   "Misoto22/kaisetsu-pipeline": {
-    "checks": []
+    "checks": [
+      "ci / python-ci"
+    ],
+    "note": "pr-title not yet reported: .github/workflows/pr-title.yml is on main but no pull request has been opened since it landed, so the context does not exist yet. Add it on the next pass."
   },
   "Misoto22/astra": {
-    "checks": []
+    "checks": [
+      "frontend / node-ci"
+    ],
+    "note": "pr-title not yet reported: .github/workflows/pr-title.yml is on main but no pull request has been opened since it landed, so the context does not exist yet. Add it on the next pass."
   },
   "Misoto22/lumia-crystal-site": {
-    "checks": []
+    "checks": [
+      "pr-title / pr-title"
+    ],
+    "note": "lint-and-build is unconditional but cannot be required: `pnpm build` reads NEXT_PUBLIC_SHOPIFY_STORE_DOMAIN and NEXT_PUBLIC_SHOPIFY_STOREFRONT_ACCESS_TOKEN from repository secrets, which a Dependabot run never receives, so it throws 'Missing Shopify environment variables' and fails every Dependabot pull request (#4, #5) while passing an ordinary one (#3). claude-review fails on every pull request including the green ones, and the Vercel commit status is red as well. Require lint-and-build once the build tolerates a missing storefront token."
   },
   "Misoto22/erp-modern": {
-    "checks": []
+    "checks": [],
+    "note": "No required context: the repository has no .github/workflows directory and no pull requests, so nothing reports."
   },
   "Misoto22/ci": {
-    "checks": []
+    "checks": [
+      "actionlint",
+      "shellcheck",
+      "yamllint"
+    ],
+    "note": "pr-title not yet reported: .github/workflows/pr-title.yml here is the reusable definition (workflow_call), not a caller, so this repository produces no pr-title / pr-title context of its own."
   }
 }

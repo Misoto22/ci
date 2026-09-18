@@ -4,8 +4,9 @@
 # Order is the fleet migration order from the CI/release plan: pilots first,
 # then services, then the batches. Adding a repository here is all that is
 # needed for scripts/fanout-release-bot.sh, scripts/apply-rulesets.sh (which
-# also needs an entry in fleet/rulesets.json) and
-# scripts/enable-immutable-releases.sh to pick it up.
+# also needs an entry in fleet/rulesets.json),
+# scripts/enable-immutable-releases.sh and scripts/enable-auto-merge.sh to pick
+# it up.
 #
 # Deliberately absent: obsidian, claude-config, ghostty-config and the Misoto22
 # profile repository — they hold no releasable software.

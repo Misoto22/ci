@@ -259,18 +259,41 @@ the check again. With `PR_TITLE`, the title that passed the check is the
 subject that lands. One lowercase Dependabot merge then sets the case for
 every later Dependabot pull request.
 
-`scripts/set-squash-merge-title.sh` sets `squash_merge_commit_title=PR_TITLE`
-on every repository in `fleet/repos.txt` that allows squash merging.
+Pairing `PR_TITLE` with `squash_merge_commit_message=COMMIT_MESSAGES` traded
+one defect for another. On a single-commit PR the squash body is that
+commit's own full message, and that message's first line is a
+conventional-commit header in its own right — one release-please has already
+read once, as the commit subject that landed. zhaojian's 672c96c shows it:
 
-- It keeps `squash_merge_commit_message` as it is: `COMMIT_MESSAGES` on every
-  repository on 2026-09-18. The REST API needs the title whenever the message
-  is sent, so the two always go together. `PR_TITLE` pairs with all three
-  message values; the settings UI offers each of those pairs. If the API
-  rejects a pair anyway, the script retries once with `COMMIT_MESSAGES` and
-  says so on the line.
+```text
+672c96c fix(deploy): reach Dokploy at the origin to bypass the Cloudflare bot challenge (#120)
+```
+
+with a body whose first line reads `fix(deploy): reach Dokploy at the origin
+past Cloudflare`. release-please's zhaojian release PR #116 changelog listed
+both as separate Bug Fixes entries for what was one change.
+
+`scripts/set-squash-merge-title.sh` now sets
+`squash_merge_commit_title=PR_TITLE` and
+`squash_merge_commit_message=PR_BODY` on every repository in
+`fleet/repos.txt` that allows squash merging.
+
+- The squash body becomes the pull request's description. That keeps the
+  rationale in the history without holding a second conventional header. The
+  REST API needs the title whenever the message is sent, so the two always go
+  together; `PR_TITLE`+`PR_BODY` is one of GitHub's documented valid pairs, so
+  the script does not fall back to another message value if the API rejects
+  it — the line reports the failure instead.
 - A repository with squash merging off is reported as `SKIP` and never written
-  to. That is `harness`, which merges with merge commits.
+  to. That is `harness`, which merges with merge commits. A repository already
+  on `PR_TITLE` is not skipped on that account alone: only
+  `PR_TITLE`+`PR_BODY` together count as done.
 - Every write is confirmed by a fresh `GET`, not by the `PATCH`'s exit code.
+
+**Write PR descriptions as prose, headings or bullets.** Because the
+description becomes the squash body, a description line that begins with a
+Conventional Commit header at column 0 (for example `fix: …`) would be parsed
+as an extra changelog entry the same way zhaojian's 672c96c body line was.
 
 ### `python-ci.yml`
 
@@ -458,7 +481,7 @@ All five default to a dry run and take `--apply` to write.
 | `scripts/apply-rulesets.sh` | Creates or updates a repository ruleset named `main` from `fleet/rulesets.json`: `~DEFAULT_BRANCH`, active, blocking deletion and force-pushes, requiring a pull request (zero approvals — a solo account cannot approve its own PR) and requiring the listed status checks with a strict up-to-date policy. A create grants no bypass; an update keeps the bypass the repository already has unless `--reset-bypass` says otherwise. An entry marked `"skip": true` is reported and left untouched. |
 | `scripts/enable-immutable-releases.sh` | Turns on immutable releases through `PUT /repos/{owner}/{repo}/immutable-releases`, which makes a published tag impossible to move or delete — [HAR-NAME-003] enforced by the platform rather than by discipline. Repositories listed in `fleet/immutable-releases-exclude.txt` are reported as `SKIP` with their reason and never written to. |
 | `scripts/enable-auto-merge.sh` | Sets `allow_auto_merge=true` (`PATCH /repos/{owner}/{repo}`), the opt-in switch for [auto-merging release PRs](#auto-merge-of-the-release-pr), but only where the default branch requires a status check besides `pr-title / pr-title`. It uses the same check as the workflow step, in a function kept identical to the one in the step. A repository that fails the check, or is listed in `fleet/auto-merge-exclude.txt`, is reported as `SKIP` with the reason and never written to. It only turns the setting on, never off. |
-| `scripts/set-squash-merge-title.sh` | Sets `squash_merge_commit_title=PR_TITLE` (`PATCH /repos/{owner}/{repo}`, sent with the repository's current `squash_merge_commit_message`) on every repository in `fleet/repos.txt` that allows squash merging. The validated PR title then becomes the squash subject, [even for a single-commit PR](#the-squash-subject-must-be-the-pr-title). A repository with squash merging off, or already on `PR_TITLE`, is reported as `SKIP`. Each write is confirmed by reading the repository back. |
+| `scripts/set-squash-merge-title.sh` | Sets `squash_merge_commit_title=PR_TITLE` and `squash_merge_commit_message=PR_BODY` (`PATCH /repos/{owner}/{repo}`) on every repository in `fleet/repos.txt` that allows squash merging. The validated PR title becomes the squash subject, [even for a single-commit PR](#the-squash-subject-must-be-the-pr-title), and the PR description becomes the squash body instead of the original commit message. A repository with squash merging off, or already on `PR_TITLE`+`PR_BODY`, is reported as `SKIP`. Each write is confirmed by reading the repository back. |
 
 `fleet/rulesets.json` maps `owner/name` to an entry with three possible keys:
 

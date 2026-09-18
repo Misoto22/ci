@@ -461,7 +461,7 @@ protection has more gates than this column shows, as described after the table.
 | `career-ops` | `pr-title / pr-title` |
 | `skills` | skipped |
 | `llm-gateway` | `check`, `pr-title / pr-title` |
-| `kioku-ui` | `pr-title / pr-title` |
+| `kioku-ui` | none |
 | `Shiplog` | none |
 | `trading-research` | `verify`, `pr-title / pr-title` |
 | `ai-investment-research-workflow` | `test` |
@@ -506,10 +506,10 @@ opened or updated after that merge. To get a first report without waiting, comme
 `synchronize`, and that runs the caller from `main`. That is how `career-ops`
 (#17) and `slatecourt` (#90) got their first report on 2026-09-18, and how
 `skills` got one on #113, which Dependabot opened in place of #22.
-`ai-investment-research-workflow`, `kaisetsu-pipeline` and `astra` had no open
-pull request to rebase. They keep a `"pr-title not yet reported"` note, so a
-later pass can add them without re-deriving the reason. `misoto22-admin-ios`,
-`erp-modern` and this repository have no caller at all.
+`ai-investment-research-workflow`, `kaisetsu-pipeline`, `astra` and `kioku-ui`
+had no open pull request to rebase. They keep a note saying pr-title has not
+reported yet, so a later pass can add them without re-deriving the reason.
+`misoto22-admin-ios`, `erp-modern` and this repository have no caller at all.
 
 **Dependabot titles and condition 3.** `pr-title / pr-title` is green for
 reasons the pull request controls, but a Dependabot title is written by
@@ -544,19 +544,6 @@ Dependabot pull request while passing an ordinary one. `career-ops` requires
 only `pr-title / pr-title` for the same class of reason: its `test` job is red
 on `main`, not on any one pull request.
 
-**The `kioku-ui` exception.** `kioku-ui` requires `pr-title / pr-title` although
-condition 2 is not met there: no pull request has been opened since its caller
-landed in #28, and there was no Dependabot pull request to rebase. The fleet
-orchestrator decided on 2026-09-18 to require it anyway. The caller is the same
-`pr-title` job calling the same reusable workflow at the same pin as every
-repository where the context renders as `pr-title / pr-title`. Review it at the
-first `kioku-ui` pull request. If the context does not appear there under
-exactly that name, drop it from `fleet/rulesets.json` and re-apply. This
-ruleset also brings the script's strict up-to-date policy to a branch whose
-classic protection has `strict: false`. Where rules overlap the most
-restrictive wins, so a `kioku-ui` pull request now has to be up to date with
-`main` before it merges.
-
 `folio` and `skills` are `"skip": true`:
 
 - **`folio`** already runs a ruleset named `main` with three required contexts
@@ -589,11 +576,13 @@ them can be noticed after the fact:
 
 Five repositories still use **classic** branch protection as their main gate:
 `kioku`, `harness`, `touchstone`, `kioku-ui` and `polymarket-edge-lab`. Their
-ruleset entries are `[]`, except `kioku-ui` (above), because the classic
-protection already enforces their contexts. Each entry's `note` records what
-that protection requires today. The two need reconciling before the ruleset is
-treated as the only gate. A context is added to the classic protection with the
-classic endpoint, not this script:
+ruleset entries are `[]`, because the classic protection already enforces their
+contexts. Each entry's `note` records what that protection requires today. The
+two need reconciling before the ruleset is treated as the only gate. Listing a
+context in the ruleset as well would not be neutral: this script always writes
+a strict up-to-date policy, and the most restrictive rule wins. That would
+override `kioku-ui`'s deliberate `strict: false`. A context is added to the
+classic protection with the classic endpoint, not this script:
 
 ```bash
 gh api repos/Misoto22/<repo>/branches/main/protection/required_status_checks \
@@ -601,6 +590,15 @@ gh api repos/Misoto22/<repo>/branches/main/protection/required_status_checks \
 # add the one context, keeping every existing entry and its app_id
 gh api -X PATCH repos/Misoto22/<repo>/branches/main/protection/required_status_checks \
   --input after.json
+```
+
+The contexts sub-endpoint appends a single context and leaves `strict` and
+every other entry alone:
+
+```bash
+gh api -X POST \
+  repos/Misoto22/<repo>/branches/main/protection/required_status_checks/contexts \
+  --input - <<<'{"contexts": ["pr-title / pr-title"]}'
 ```
 
 `fleet/immutable-releases-exclude.txt` is the equivalent list for

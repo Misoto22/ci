@@ -51,10 +51,8 @@
     ]
   },
   "Misoto22/kioku-ui": {
-    "checks": [
-      "pr-title / pr-title"
-    ],
-    "note": "Two gates stack on main here. Classic branch protection requires check, build, accessibility and consumers (strict: false) and is not changed by this script. This ruleset adds pr-title / pr-title, and the most restrictive rule wins. Two exceptions to the README's conditions, both decided by the fleet orchestrator on 2026-09-18. First, condition 2 is not met: no pull request has been opened since the caller landed in #28 and there was no Dependabot pull request to rebase, so the context has never reported here. It is required anyway because the caller is the same `pr-title` job calling the same reusable workflow at the same pin as the repositories where it renders as pr-title / pr-title. Second, this ruleset sets strict_required_status_checks_policy: true, so a pull request must be up to date with main before it merges, where the classic protection alone did not ask for that."
+    "checks": [],
+    "note": "Classic branch protection owns main here and requires check, build, accessibility and consumers with strict: false, deliberately. This ruleset stays []: any context listed here would bring this script's strict_required_status_checks_policy: true, and the most restrictive rule wins, so every kioku-ui pull request would have to be up to date with main. pr-title / pr-title goes in through the classic protection instead, with POST repos/Misoto22/kioku-ui/branches/main/protection/required_status_checks/contexts, which adds one context and leaves strict: false alone. Do that only once the context has reported on a kioku-ui pull request. On 2026-09-18 it had not: no pull request had been opened since the caller landed in #28, and there was no Dependabot pull request to rebase."
   },
   "Misoto22/Shiplog": {
     "checks": [],

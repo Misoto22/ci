@@ -221,13 +221,56 @@ jobs:
     uses: Misoto22/ci/.github/workflows/pr-title.yml@<sha> # v0.1.0
 ```
 
-Every repository squash-merges, so the PR title becomes the commit subject on
-the default branch, and that subject is what release-please parses. `labeled` /
+Every repository except `harness` squash-merges. release-please parses the
+commit subject that lands on the default branch, so the PR title only matters
+if it becomes that subject. On GitHub's default settings it does not always
+(see [the next section](#the-squash-subject-must-be-the-pr-title)). `labeled` /
 `unlabeled` are worth including: release-please labels its own release PR
 `autorelease: pending` after opening it, and that label is what makes this check
 skip it.
 
 Resulting check: `pr-title / pr-title`.
+
+#### The squash subject must be the PR title
+
+`pr-title / pr-title` validates the pull request's title. release-please parses
+the commit subject that lands on the default branch. The two are the same only
+when the repository's `squash_merge_commit_title` is `PR_TITLE`. GitHub's
+default, `COMMIT_OR_PR_TITLE`, uses the PR title only for a pull request with
+more than one commit. A single-commit pull request lands that commit's own
+subject, which no check has read.
+
+servo-map #20 shows the difference. Dependabot opened it as `chore: Bump the
+actions group across 1 directory with 3 updates`. It was retitled to
+`chore: bump …`, passed `pr-title / pr-title` and every other required check,
+and landed as Dependabot's original commit subject:
+
+```text
+ef2f7d0 chore: Bump the actions group across 1 directory with 3 updates (#20)
+```
+
+That commit does more than put an unvalidated subject in front of
+release-please. It also sets Dependabot's next title. dependabot-core's
+`PrNamePrefixer#capitalize_first_word?` copies the case of the last Dependabot
+commit on the default branch (see
+[What each repository requires](#what-each-repository-requires)), so
+servo-map's next Dependabot pull request comes out `chore: Bump …` and fails
+the check again. With `PR_TITLE`, the title that passed the check is the
+subject that lands. One lowercase Dependabot merge then sets the case for
+every later Dependabot pull request.
+
+`scripts/set-squash-merge-title.sh` sets `squash_merge_commit_title=PR_TITLE`
+on every repository in `fleet/repos.txt` that allows squash merging.
+
+- It keeps `squash_merge_commit_message` as it is: `COMMIT_MESSAGES` on every
+  repository on 2026-09-18. The REST API needs the title whenever the message
+  is sent, so the two always go together. `PR_TITLE` pairs with all three
+  message values; the settings UI offers each of those pairs. If the API
+  rejects a pair anyway, the script retries once with `COMMIT_MESSAGES` and
+  says so on the line.
+- A repository with squash merging off is reported as `SKIP` and never written
+  to. That is `harness`, which merges with merge commits.
+- Every write is confirmed by a fresh `GET`, not by the `PATCH`'s exit code.
 
 ### `python-ci.yml`
 
@@ -407,7 +450,7 @@ are never moved ([HAR-NAME-003]).
 
 ## Scripts
 
-All four default to a dry run and take `--apply` to write.
+All five default to a dry run and take `--apply` to write.
 
 | Script | What it does |
 |---|---|
@@ -415,6 +458,7 @@ All four default to a dry run and take `--apply` to write.
 | `scripts/apply-rulesets.sh` | Creates or updates a repository ruleset named `main` from `fleet/rulesets.json`: `~DEFAULT_BRANCH`, active, blocking deletion and force-pushes, requiring a pull request (zero approvals — a solo account cannot approve its own PR) and requiring the listed status checks with a strict up-to-date policy. A create grants no bypass; an update keeps the bypass the repository already has unless `--reset-bypass` says otherwise. An entry marked `"skip": true` is reported and left untouched. |
 | `scripts/enable-immutable-releases.sh` | Turns on immutable releases through `PUT /repos/{owner}/{repo}/immutable-releases`, which makes a published tag impossible to move or delete — [HAR-NAME-003] enforced by the platform rather than by discipline. Repositories listed in `fleet/immutable-releases-exclude.txt` are reported as `SKIP` with their reason and never written to. |
 | `scripts/enable-auto-merge.sh` | Sets `allow_auto_merge=true` (`PATCH /repos/{owner}/{repo}`), the opt-in switch for [auto-merging release PRs](#auto-merge-of-the-release-pr), but only where the default branch requires a status check besides `pr-title / pr-title`. It uses the same check as the workflow step, in a function kept identical to the one in the step. A repository that fails the check, or is listed in `fleet/auto-merge-exclude.txt`, is reported as `SKIP` with the reason and never written to. It only turns the setting on, never off. |
+| `scripts/set-squash-merge-title.sh` | Sets `squash_merge_commit_title=PR_TITLE` (`PATCH /repos/{owner}/{repo}`, sent with the repository's current `squash_merge_commit_message`) on every repository in `fleet/repos.txt` that allows squash merging. The validated PR title then becomes the squash subject, [even for a single-commit PR](#the-squash-subject-must-be-the-pr-title). A repository with squash merging off, or already on `PR_TITLE`, is reported as `SKIP`. Each write is confirmed by reading the repository back. |
 
 `fleet/rulesets.json` maps `owner/name` to an entry with three possible keys:
 
@@ -536,9 +580,11 @@ single-commit squash takes Dependabot's commit subject, not the edited title.
   its later titles should pass.
 - `servo-map`'s #20 was retitled but landed as `ef2f7d0 chore: Bump the actions
   group …`. Its next Dependabot pull request will come out `chore: Bump …` and
-  fail `pr-title / pr-title`. That pull request's title and squash subject both
-  have to be fixed by hand, or the repository's squash title switched to
-  `PR_TITLE`, before the case is anchored lowercase.
+  fail `pr-title / pr-title`. Fix that pull request's title by hand. Once
+  `scripts/set-squash-merge-title.sh` has switched the repository's squash
+  title to `PR_TITLE`
+  ([why](#the-squash-subject-must-be-the-pr-title)), the corrected title is
+  what lands, and that sets the case lowercase for good.
 
 **Condition 1: `paths` and `paths-ignore`.** `misoto22-site`, `zhaojian` and
 `Shiplog` keep their CI contexts out because each `ci.yml` declares

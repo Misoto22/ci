@@ -473,7 +473,7 @@ protection has more gates than this column shows, as described after the table.
 | `eoi-points-calculator` | `verify`, `deploy`, `pr-title / pr-title` |
 | `cvtailors` | `rust`, `frontend`, `pr-title / pr-title` |
 | `slatecourt` | `changes`, `pr-title / pr-title` |
-| `servo-map` | `Typecheck`, `Lint`, `Test`, `Build Web` |
+| `servo-map` | `Typecheck`, `Lint`, `Test`, `Build Web`, `pr-title / pr-title` |
 | `kairos` | `Backend (ruff + pytest)`, `Frontend (lint + vitest)`, `pr-title / pr-title` |
 | `kaisetsu-pipeline` | `ci / python-ci` |
 | `astra` | `frontend / node-ci` |

@@ -55,8 +55,10 @@
     "note": "Classic branch protection owns main here and requires check, build, accessibility and consumers with strict: false, deliberately. This ruleset stays []: any context listed here would bring this script's strict_required_status_checks_policy: true, and the most restrictive rule wins, so every kioku-ui pull request would have to be up to date with main. pr-title / pr-title goes in through the classic protection instead, with POST repos/Misoto22/kioku-ui/branches/main/protection/required_status_checks/contexts, which adds one context and leaves strict: false alone. Do that only once the context has reported on a kioku-ui pull request. On 2026-09-18 it had not: no pull request had been opened since the caller landed in #28, and there was no Dependabot pull request to rebase."
   },
   "Misoto22/Shiplog": {
-    "checks": [],
-    "note": "No required context yet. Verify cannot be required: pull request #4 (merged) put paths-ignore (**.md, docs/**, LICENSE, .gitignore) on both triggers of ci.yml to cap hosted macOS minutes, so a docs-only pull request produces no run and a required Verify would sit pending forever. pr-title / pr-title has a caller since #4, but the only pull request since, Dependabot #5, fails it: 'Bump actions/checkout from 5.1.0 to 7.0.1 in the workflow-actions group' carries no Conventional Commit type, because .github/dependabot.yml sets no commit-message prefix. Shiplog pull request #6 adds `prefix: chore`; once it merges and Dependabot recreates #5, require pr-title / pr-title if that run is green."
+    "checks": [
+      "pr-title / pr-title"
+    ],
+    "note": "pr-title / pr-title only. Verify cannot be required: pull request #4 put paths-ignore (**.md, docs/**, LICENSE, .gitignore) on both triggers of ci.yml to cap hosted macOS minutes, so a docs-only pull request produces no run and a required Verify would sit pending forever. Dependabot #5 first failed pr-title because .github/dependabot.yml set no commit-message prefix. #6 added `prefix: chore`, and the recreated #5 ('chore: bump actions/checkout from 5.1.0 to 7.0.1 in the workflow-actions group across 1 directory') passed on 2026-09-18. The prefix sets the type but not the case of 'bump'. dependabot-core's PrNamePrefixer#capitalize_first_word? copies the case of the last Dependabot commit on main. #5 was squash-merged as 3714d54 'chore: bump actions/checkout (#5)', in lowercase, so later Dependabot titles here should come out lowercase too."
   },
   "Misoto22/trading-research": {
     "checks": [

@@ -462,7 +462,7 @@ protection has more gates than this column shows, as described after the table.
 | `skills` | skipped |
 | `llm-gateway` | `check`, `pr-title / pr-title` |
 | `kioku-ui` | none |
-| `Shiplog` | none |
+| `Shiplog` | `pr-title / pr-title` |
 | `trading-research` | `verify`, `pr-title / pr-title` |
 | `ai-investment-research-workflow` | `test` |
 | `polymarket-edge-lab` | none |
@@ -511,26 +511,40 @@ had no open pull request to rebase. They keep a note saying pr-title has not
 reported yet, so a later pass can add them without re-deriving the reason.
 `misoto22-admin-ios`, `erp-modern` and this repository have no caller at all.
 
-**Dependabot titles and condition 3.** `pr-title / pr-title` is green for
-reasons the pull request controls, but a Dependabot title is written by
-Dependabot's configuration, not by hand. On `Shiplog` it fails because
-`.github/dependabot.yml` sets no `commit-message.prefix`, so the title has no
-type ([Shiplog#6](https://github.com/Misoto22/Shiplog/pull/6) adds `chore`). On
-`servo-map` it fails even with `prefix: chore`, because the prefix does not
-decide the case. dependabot-core's `PrNamePrefixer` capitalises "Bump" when no
-Dependabot commit is on the default branch and every recent Conventional Commit
-message has `: ` followed by a capital somewhere in its full text. Every commit
-there carries a `Co-Authored-By:` trailer, which satisfies that. Neither
-repository requires the context until a Dependabot pull request passes it,
-because requiring it earlier would block every Dependabot update. Retitling
-one Dependabot pull request to lowercase before squash-merging it fixes the
-case for good, since later titles copy the last Dependabot commit on `main`.
+**Dependabot titles.** `pr-title / pr-title` checks a title that Dependabot
+writes, so Dependabot's configuration decides whether its pull requests pass.
+Two things decide it:
+
+- **The type** comes from `commit-message.prefix` in `.github/dependabot.yml`.
+  Without one the title is `Bump x from y to z`, which fails. That was
+  `Shiplog` until [Shiplog#6](https://github.com/Misoto22/Shiplog/pull/6)
+  added `chore`.
+- **The case of "bump"** comes from dependabot-core's
+  `PrNamePrefixer#capitalize_first_word?`, not from the prefix. It copies the
+  last Dependabot commit on the default branch. When there is none, it
+  capitalises when every recent Conventional Commit message has `: ` followed
+  by a capital somewhere in its full text, and a `Co-Authored-By:` trailer is
+  enough. That is why `servo-map` got `chore: Bump …` although it has
+  `prefix: chore`.
+
+So the first Dependabot commit to land on `main` sets the case for every later
+title, and it has to land lowercase. Retitling the pull request is not enough.
+Under the default `squash_merge_commit_title: COMMIT_OR_PR_TITLE`, a
+single-commit squash takes Dependabot's commit subject, not the edited title.
+
+- `Shiplog`'s #5 landed lowercase (`3714d54 chore: bump actions/checkout`), so
+  its later titles should pass.
+- `servo-map`'s #20 was retitled but landed as `ef2f7d0 chore: Bump the actions
+  group …`. Its next Dependabot pull request will come out `chore: Bump …` and
+  fail `pr-title / pr-title`. That pull request's title and squash subject both
+  have to be fixed by hand, or the repository's squash title switched to
+  `PR_TITLE`, before the case is anchored lowercase.
 
 **Condition 1: `paths` and `paths-ignore`.** `misoto22-site`, `zhaojian` and
 `Shiplog` keep their CI contexts out because each `ci.yml` declares
 `paths-ignore` on `pull_request`. A docs-only pull request produces **no run at
 all**, so a required context would sit pending forever and block a merge that
-should have been trivial. The first two require `pr-title / pr-title` alone.
+should have been trivial. All three require `pr-title / pr-title` alone.
 `rules`, from the harness-rendered `misoto-harness.yml`, is required nowhere:
 since harness 0.4.0 its triggers are restricted to the paths the drift check
 reads. `slatecourt` requires only `changes` from CI: `api`, `web` and `contract`

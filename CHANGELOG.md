@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.0](https://github.com/Misoto22/ci/compare/v0.6.0...v0.7.0) (2026-09-18)
+
+
+### Features
+
+* **fleet:** land the validated PR title as the squash subject ([#12](https://github.com/Misoto22/ci/issues/12)) ([c35d621](https://github.com/Misoto22/ci/commit/c35d621fe46267cf7d113d00b59b150f4aa26e55))
+
 ## [0.6.0](https://github.com/Misoto22/ci/compare/v0.5.0...v0.6.0) (2026-09-18)
 
 

@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.1](https://github.com/Misoto22/ci/compare/v0.7.0...v0.7.1) (2026-09-18)
+
+
+### Bug Fixes
+
+* **fleet:** take the squash body from the PR description ([#15](https://github.com/Misoto22/ci/issues/15)) ([7c5abd6](https://github.com/Misoto22/ci/commit/7c5abd685ea187a224ed7effe0d720b76331c3fe))
+
 ## [0.7.0](https://github.com/Misoto22/ci/compare/v0.6.0...v0.7.0) (2026-09-18)
 
 

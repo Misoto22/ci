@@ -11,5 +11,5 @@
 # already on: to opt a repository out, turn allow_auto_merge off in its settings
 # (or pass `auto-merge: false` to the reusable release.yml) and list it here so
 # the next run of the script does not turn it back on.
-#
-# Empty on purpose when the switch was introduced (2026-09-18).
+
+Misoto22/harness # release PRs follow the manual pre-merge checklist in harness docs/releasing.md and merge with --merge after a human review of the snapshot job's commit

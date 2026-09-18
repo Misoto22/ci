@@ -35,8 +35,10 @@
     "note": "Left alone: folio already runs a ruleset named main with three required contexts and an admin bypass (RepositoryRole 5). Replacing it from the fleet default would be a net loss, so its branch protection moves with its release-please migration instead."
   },
   "Misoto22/career-ops": {
-    "checks": [],
-    "note": "No required context yet: test is the only unconditional pull_request job and it is red for a pre-existing reason (node test-all.mjs --quick fails on main, not on any one pull request). label and welcome are pull_request_target-only and welcome fires on `opened` alone, so neither reports on every pull request. pr-title has not reported yet — .github/workflows/pr-title.yml is on main but no pull request has been opened since it landed."
+    "checks": [
+      "pr-title / pr-title"
+    ],
+    "note": "pr-title / pr-title only. It reported green on Dependabot #17 ('build(deps): bump actions/stale from 10 to 11') after an `@dependabot rebase` on 2026-09-18, the first report since its caller landed in #19. test is the only unconditional pull_request CI job and it is red for a pre-existing reason (node test-all.mjs --quick fails on main, not on any one pull request), so it stays out. label and welcome are pull_request_target-only and welcome fires on `opened` alone, so neither reports on every pull request."
   },
   "Misoto22/skills": {
     "skip": true,
@@ -49,12 +51,14 @@
     ]
   },
   "Misoto22/kioku-ui": {
-    "checks": [],
-    "note": "Classic branch protection owns main here and already requires check, build, accessibility and consumers. Reconcile the two before moving the contexts into this ruleset."
+    "checks": [
+      "pr-title / pr-title"
+    ],
+    "note": "Two gates stack on main here. Classic branch protection requires check, build, accessibility and consumers (strict: false) and is not changed by this script. This ruleset adds pr-title / pr-title, and the most restrictive rule wins. Two exceptions to the README's conditions, both decided by the fleet orchestrator on 2026-09-18. First, condition 2 is not met: no pull request has been opened since the caller landed in #28 and there was no Dependabot pull request to rebase, so the context has never reported here. It is required anyway because the caller is the same `pr-title` job calling the same reusable workflow at the same pin as the repositories where it renders as pr-title / pr-title. Second, this ruleset sets strict_required_status_checks_policy: true, so a pull request must be up to date with main before it merges, where the classic protection alone did not ask for that."
   },
   "Misoto22/Shiplog": {
     "checks": [],
-    "note": "No required context yet. Verify cannot be required: pull request #4 (merged) put paths-ignore (**.md, docs/**, LICENSE, .gitignore) on both triggers of ci.yml to cap hosted macOS minutes, so a docs-only pull request produces no run and a required Verify would sit pending forever. pr-title / pr-title has a caller since #4, but the only pull request since, Dependabot #5, fails it: 'Bump actions/checkout from 5.1.0 to 7.0.1 in the workflow-actions group' carries no Conventional Commit type, because .github/dependabot.yml sets no commit-message prefix. Requiring it now would block every Dependabot pull request; add it once it has reported green."
+    "note": "No required context yet. Verify cannot be required: pull request #4 (merged) put paths-ignore (**.md, docs/**, LICENSE, .gitignore) on both triggers of ci.yml to cap hosted macOS minutes, so a docs-only pull request produces no run and a required Verify would sit pending forever. pr-title / pr-title has a caller since #4, but the only pull request since, Dependabot #5, fails it: 'Bump actions/checkout from 5.1.0 to 7.0.1 in the workflow-actions group' carries no Conventional Commit type, because .github/dependabot.yml sets no commit-message prefix. Shiplog pull request #6 adds `prefix: chore`; once it merges and Dependabot recreates #5, require pr-title / pr-title if that run is green."
   },
   "Misoto22/trading-research": {
     "checks": [
@@ -66,7 +70,7 @@
     "checks": [
       "test"
     ],
-    "note": "pr-title not yet reported: .github/workflows/pr-title.yml is on main but no pull request has been opened since it landed, so the context does not exist yet. Add it on the next pass."
+    "note": "pr-title not yet reported: .github/workflows/pr-title.yml is on main but no pull request has been opened since it landed, and on 2026-09-18 there was no open pull request to rebase either, so the context does not exist yet. Add it once a pull request has reported it."
   },
   "Misoto22/polymarket-edge-lab": {
     "checks": [],
@@ -114,9 +118,10 @@
   },
   "Misoto22/slatecourt": {
     "checks": [
-      "changes"
+      "changes",
+      "pr-title / pr-title"
     ],
-    "note": "changes is the only unconditional job: api, web and contract are gated on its dorny/paths-filter outputs, e2e needs web, deploy is push-only, and ios.yml is paths-filtered to apps/ios. pr-title not yet reported: its caller landed in #91 and no pull request has been opened since; the open Dependabot pull requests (#83–#90) predate it and have not been updated. Add it on the next pass."
+    "note": "changes is the only unconditional CI job: api, web and contract are gated on its dorny/paths-filter outputs, e2e needs web, deploy is push-only, and ios.yml is paths-filtered to apps/ios. pr-title / pr-title reported green on Dependabot #90 ('ci: bump dorny/paths-filter from 4.0.1 to 4.0.3') after an `@dependabot rebase` on 2026-09-18, the first report since its caller landed in #91."
   },
   "Misoto22/servo-map": {
     "checks": [
@@ -125,7 +130,7 @@
       "Test",
       "Build Web"
     ],
-    "note": "pr-title / pr-title not required: its caller landed in #19, and the only pull request since, Dependabot #20, fails it — 'chore: Bump the actions group with 3 updates' breaks the lowercase-subject rule although .github/dependabot.yml sets the chore prefix. Requiring it now would block every Dependabot pull request; add it once it has reported green."
+    "note": "pr-title / pr-title not required: its caller landed in #19, and Dependabot #20 fails it even after `@dependabot recreate` on 2026-09-18 — 'chore: Bump the actions group across 1 directory with 3 updates' breaks the lowercase-subject rule although .github/dependabot.yml sets the chore prefix. The prefix does not decide the case: dependabot-core's PrNamePrefixer capitalises when no Dependabot commit is on main and every recent Conventional Commit message has ': ' followed by a capital somewhere, and every commit here carries a Co-Authored-By trailer. Retitle #20 to 'chore: bump …' before squash-merging it; later titles then follow that last Dependabot commit. Require the context once it has reported green."
   },
   "Misoto22/kairos": {
     "checks": [
@@ -139,13 +144,13 @@
     "checks": [
       "ci / python-ci"
     ],
-    "note": "pr-title not yet reported: .github/workflows/pr-title.yml is on main but no pull request has been opened since it landed, so the context does not exist yet. Add it on the next pass."
+    "note": "pr-title not yet reported: .github/workflows/pr-title.yml is on main but no pull request has been opened since it landed, and on 2026-09-18 there was no open pull request to rebase either, so the context does not exist yet. Add it once a pull request has reported it."
   },
   "Misoto22/astra": {
     "checks": [
       "frontend / node-ci"
     ],
-    "note": "pr-title not yet reported: .github/workflows/pr-title.yml is on main but no pull request has been opened since it landed, so the context does not exist yet. Add it on the next pass."
+    "note": "pr-title not yet reported: .github/workflows/pr-title.yml is on main but no pull request has been opened since it landed, and on 2026-09-18 there was no open pull request to rebase either, so the context does not exist yet. Add it once a pull request has reported it."
   },
   "Misoto22/lumia-crystal-site": {
     "checks": [

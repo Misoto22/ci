@@ -376,36 +376,121 @@ gh api repos/Misoto22/<repo>/commits/<pr-head-sha>/check-runs \
   --jq '.check_runs[] | {name, app: .app.slug, conclusion}'
 ```
 
-Condition 2 is why `pr-title / pr-title` is absent from several repositories
-that already carry `.github/workflows/pr-title.yml`: a `pull_request_target`
-workflow runs the definition from the **base** branch, so the pull request that
-adds the caller never produces the context, and it only appears on the next pull
-request opened after that merge. Those entries carry a `"pr-title not yet
-reported"` note so a later pass can add them without re-deriving the reason.
+### What each repository requires
 
-Condition 1 is about the workflow that will be on the default branch when the
-ruleset is applied, not only the one there now. A context that is unconditional
-today and conditional after a pull request already in flight is not safe to
-require: `Shiplog`'s `Verify` gets `paths-ignore` in its open release-bot pull
-request, and the `rules` context on `misoto22-admin` and `misoto22-admin-ios`
-comes from a harness-rendered workflow whose template
-([harness#33](https://github.com/Misoto22/harness/pull/33)) now carries `paths:`
-and reaches those repositories at their next `misoto-harness sync --apply`. All
-three stay `[]` with a note saying what to re-survey and when.
+What the `main` ruleset requires on each repository, in `fleet/rulesets.json`
+order. The rows are generated from that file, so it and this table cannot
+disagree without the check below saying so. A repository under classic branch
+protection has more gates than this column shows, as described after the table.
 
-Condition 3 is why `lumia-crystal-site` requires only `pr-title / pr-title`
-although `lint-and-build` is unconditional: the build reads two
-`NEXT_PUBLIC_SHOPIFY_*` repository secrets, which a Dependabot run never
-receives, so it fails every Dependabot pull request while passing an ordinary
-one. `career-ops` is empty for the same class of reason — its `test` job is red
+<!-- required-checks:begin -->
+| Repository | `main` ruleset requires |
+|---|---|
+| `touchstone-hosted-probe` | `test`, `pr-title / pr-title` |
+| `kioku-ios` | `Build`, `pr-title / pr-title` |
+| `kioku` | none |
+| `harness` | none |
+| `touchstone` | none |
+| `misoto22-site` | `pr-title / pr-title` |
+| `folio` | skipped |
+| `career-ops` | `pr-title / pr-title` |
+| `skills` | skipped |
+| `llm-gateway` | `check`, `pr-title / pr-title` |
+| `kioku-ui` | `pr-title / pr-title` |
+| `Shiplog` | none |
+| `trading-research` | `verify`, `pr-title / pr-title` |
+| `ai-investment-research-workflow` | `test` |
+| `polymarket-edge-lab` | none |
+| `misoto22-admin-ios` | none |
+| `misoto22-admin` | `pr-title / pr-title` |
+| `portrait-lora-pipeline` | `Core (ubuntu-latest)`, `Core (windows-latest)`, `body-and-verification`, `review-resolution`, `pr-title / pr-title` |
+| `zhaojian` | `pr-title / pr-title` |
+| `eoi-points-calculator` | `verify`, `deploy`, `pr-title / pr-title` |
+| `cvtailors` | `rust`, `frontend`, `pr-title / pr-title` |
+| `slatecourt` | `changes`, `pr-title / pr-title` |
+| `servo-map` | `Typecheck`, `Lint`, `Test`, `Build Web` |
+| `kairos` | `Backend (ruff + pytest)`, `Frontend (lint + vitest)`, `pr-title / pr-title` |
+| `kaisetsu-pipeline` | `ci / python-ci` |
+| `astra` | `frontend / node-ci` |
+| `lumia-crystal-site` | `pr-title / pr-title` |
+| `erp-modern` | none |
+| `ci` | `actionlint`, `shellcheck`, `yamllint` |
+<!-- required-checks:end -->
+
+After editing `fleet/rulesets.json`, regenerate the rows and compare. The
+command prints nothing when the table is current:
+
+```bash
+diff \
+  <(jq -r 'to_entries[] | "| `\(.key | sub("^Misoto22/"; ""))` | \(
+      if .value.skip then "skipped"
+      elif (.value.checks | length) == 0 then "none"
+      else (.value.checks | map("`" + . + "`") | join(", ")) end) |"' \
+      fleet/rulesets.json) \
+  <(sed -n '/^<!-- required-checks:begin -->$/,/^<!-- required-checks:end -->$/p' README.md |
+    grep '^| `')
+```
+
+Every entry's `note` gives the reason for its row. The patterns behind them:
+
+**Condition 2 and `pr-title / pr-title`.** A `pull_request_target` workflow runs
+the definition from the **base** branch, so the pull request that adds the
+caller never produces the context. It first appears on the next pull request
+opened or updated after that merge. To get a first report without waiting, comment
+`@dependabot rebase` on an older open Dependabot pull request: the rebase fires
+`synchronize`, and that runs the caller from `main`. That is how `career-ops`
+(#17) and `slatecourt` (#90) got their first report on 2026-09-18, and how
+`skills` got one on #113, which Dependabot opened in place of #22.
+`ai-investment-research-workflow`, `kaisetsu-pipeline` and `astra` had no open
+pull request to rebase. They keep a `"pr-title not yet reported"` note, so a
+later pass can add them without re-deriving the reason. `misoto22-admin-ios`,
+`erp-modern` and this repository have no caller at all.
+
+**Dependabot titles and condition 3.** `pr-title / pr-title` is green for
+reasons the pull request controls, but a Dependabot title is written by
+Dependabot's configuration, not by hand. On `Shiplog` it fails because
+`.github/dependabot.yml` sets no `commit-message.prefix`, so the title has no
+type ([Shiplog#6](https://github.com/Misoto22/Shiplog/pull/6) adds `chore`). On
+`servo-map` it fails even with `prefix: chore`, because the prefix does not
+decide the case. dependabot-core's `PrNamePrefixer` capitalises "Bump" when no
+Dependabot commit is on the default branch and every recent Conventional Commit
+message has `: ` followed by a capital somewhere in its full text. Every commit
+there carries a `Co-Authored-By:` trailer, which satisfies that. Neither
+repository requires the context until a Dependabot pull request passes it,
+because requiring it earlier would block every Dependabot update. Retitling
+one Dependabot pull request to lowercase before squash-merging it fixes the
+case for good, since later titles copy the last Dependabot commit on `main`.
+
+**Condition 1: `paths` and `paths-ignore`.** `misoto22-site`, `zhaojian` and
+`Shiplog` keep their CI contexts out because each `ci.yml` declares
+`paths-ignore` on `pull_request`. A docs-only pull request produces **no run at
+all**, so a required context would sit pending forever and block a merge that
+should have been trivial. The first two require `pr-title / pr-title` alone.
+`rules`, from the harness-rendered `misoto-harness.yml`, is required nowhere:
+since harness 0.4.0 its triggers are restricted to the paths the drift check
+reads. `slatecourt` requires only `changes` from CI: `api`, `web` and `contract`
+are gated on its path-filter outputs.
+
+**Condition 3: red for a reason the pull request does not control.**
+`lumia-crystal-site` requires only `pr-title / pr-title` although
+`lint-and-build` is unconditional: the build reads two `NEXT_PUBLIC_SHOPIFY_*`
+repository secrets, which a Dependabot run never receives, so it fails every
+Dependabot pull request while passing an ordinary one. `career-ops` requires
+only `pr-title / pr-title` for the same class of reason: its `test` job is red
 on `main`, not on any one pull request.
 
-`misoto22-site` and `zhaojian` carry a `note` explaining why they stay empty
-although both have a green `ci.yml`: both workflows declare `paths-ignore`, so a
-docs-only pull request produces **no run at all**. A required context would then
-sit pending forever and block a merge that should have been trivial. Making
-those contexts required needs an always-reports job to hang them on, and that is
-decided in each repository's own release-bot pull request.
+**The `kioku-ui` exception.** `kioku-ui` requires `pr-title / pr-title` although
+condition 2 is not met there: no pull request has been opened since its caller
+landed in #28, and there was no Dependabot pull request to rebase. The fleet
+orchestrator decided on 2026-09-18 to require it anyway. The caller is the same
+`pr-title` job calling the same reusable workflow at the same pin as every
+repository where the context renders as `pr-title / pr-title`. Review it at the
+first `kioku-ui` pull request. If the context does not appear there under
+exactly that name, drop it from `fleet/rulesets.json` and re-apply. This
+ruleset also brings the script's strict up-to-date policy to a branch whose
+classic protection has `strict: false`. Where rules overlap the most
+restrictive wins, so a `kioku-ui` pull request now has to be up to date with
+`main` before it merges.
 
 `folio` and `skills` are `"skip": true`:
 
@@ -414,7 +499,10 @@ decided in each repository's own release-bot pull request.
   protection moves with its release-please migration instead.
 - **`skills`** protects its default branch with its own ruleset, `Protect
   default branch`. A second ruleset named `main` beside it would be a duplicate
-  gate on the same branch with nothing keeping the two in step.
+  gate on the same branch with nothing keeping the two in step. A context is
+  added to that ruleset by hand: read it back, append the context and keep every
+  other field, including `bypass_actors`, then PUT it. This script never writes
+  it.
 
 A ruleset is additive to any classic branch protection already in place; the
 most restrictive rule wins. It never weakens an existing gate, but it does start
@@ -434,12 +522,13 @@ them can be noticed after the fact:
   empty list. `--reset-bypass` is how to clear a bypass on purpose, and an
   `--apply` that carried actors over says so on its `OK` line.
 
-Several repositories still use **classic** branch protection rather than a
-ruleset (`kioku`, `harness`, `touchstone`, `kioku-ui`, `polymarket-edge-lab`).
-Those contexts are seeded as `[]` here because the classic protection already
-enforces them; each entry's `note` records what that protection requires today,
-and the two need reconciling before the ruleset is treated as the only gate. A
-context is added there with the classic endpoint, not this script:
+Five repositories still use **classic** branch protection as their main gate:
+`kioku`, `harness`, `touchstone`, `kioku-ui` and `polymarket-edge-lab`. Their
+ruleset entries are `[]`, except `kioku-ui` (above), because the classic
+protection already enforces their contexts. Each entry's `note` records what
+that protection requires today. The two need reconciling before the ruleset is
+treated as the only gate. A context is added to the classic protection with the
+classic endpoint, not this script:
 
 ```bash
 gh api repos/Misoto22/<repo>/branches/main/protection/required_status_checks \

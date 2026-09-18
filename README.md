@@ -580,11 +580,11 @@ single-commit squash takes Dependabot's commit subject, not the edited title.
   its later titles should pass.
 - `servo-map`'s #20 was retitled but landed as `ef2f7d0 chore: Bump the actions
   group …`. Its next Dependabot pull request will come out `chore: Bump …` and
-  fail `pr-title / pr-title`. Fix that pull request's title by hand. Once
-  `scripts/set-squash-merge-title.sh` has switched the repository's squash
-  title to `PR_TITLE`
-  ([why](#the-squash-subject-must-be-the-pr-title)), the corrected title is
-  what lands, and that sets the case lowercase for good.
+  fail `pr-title / pr-title`. Fix that one pull request's title by hand.
+  `scripts/set-squash-merge-title.sh` switched the repository's squash title
+  to `PR_TITLE` on 2026-09-18
+  ([why](#the-squash-subject-must-be-the-pr-title)), so the corrected title is
+  what lands, and it sets the case lowercase for later titles.
 
 **Condition 1: `paths` and `paths-ignore`.** `misoto22-site`, `zhaojian` and
 `Shiplog` keep their CI contexts out because each `ci.yml` declares

@@ -1,0 +1,15 @@
+# Repositories that must NOT get "Allow auto-merge" turned on by
+# scripts/enable-auto-merge.sh.
+#
+# One `owner/name` per line, with the reason after a `#` on the same line.
+# Blank lines and whole-line comments are ignored, and the script prints a SKIP
+# with the reason for every entry it finds here.
+#
+# The repository setting is the per-repository opt-in switch for auto-merging
+# the release bot's PRs, so an entry here keeps that repository's release PRs
+# waiting for a hand merge. It does not switch the setting off where it is
+# already on: to opt a repository out, turn allow_auto_merge off in its settings
+# (or pass `auto-merge: false` to the reusable release.yml) and list it here so
+# the next run of the script does not turn it back on.
+
+Misoto22/harness # release PRs follow the manual pre-merge checklist in harness docs/releasing.md and merge with --merge after a human review of the snapshot job's commit

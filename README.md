@@ -117,12 +117,14 @@ jobs:
       # config-file:   release-please-config.json     (default)
       # manifest-file: .release-please-manifest.json  (default)
       # target-branch: main                           (default)
+      # auto-merge:    true                           (default)
     secrets:
       APP_PRIVATE_KEY: ${{ secrets.APP_PRIVATE_KEY }}
 ```
 
 Outputs: `release_created`, `releases_created`, `tag_name`, `version`, `major`,
-`minor`, `patch`, `prs_created`, `paths_released`, `pr`.
+`minor`, `patch`, `prs_created`, `paths_released`, `pr`, `auto_merge`,
+`auto_merge_reason`.
 
 **Why an App token and not `GITHUB_TOKEN`.** Tags, releases and commits created
 with the default `GITHUB_TOKEN` deliberately trigger no further workflow runs.
@@ -132,13 +134,75 @@ from the `misoto22-release-bot` App is a different identity, so the events it
 raises do start downstream workflows. The token is minted per job, scoped to the
 calling repository, valid for one hour and revoked in a post step.
 
-**The tag guard.** The last step re-reads every `tag_name` the action emitted and
-fails the job if the git ref does not exist. This is the defence against
+**The tag guard.** The "Verify the tag exists" step re-reads every `tag_name`
+the action emitted and fails the job if the git ref does not exist. This is the
+defence against
 [release-please#2898](https://github.com/googleapis/release-please/issues/2898):
 under REST API version `2026-03-10` the pull-request payload no longer carries
 `merge_commit_sha`, so release-please creates no tag and **still exits 0**. Never
 set `X-GitHub-Api-Version` in a release job, and never read a green release job
 as proof that a release happened.
+
+#### Auto-merge of the release PR
+
+The last step enables GitHub auto-merge on the bot's release PR, so it merges
+itself once the target branch's required checks pass. It acts only when **all**
+of these hold, each read live on every run:
+
+1. **release-please opened or updated a release PR in this run**
+   (`prs_created == 'true'`; the PR numbers come from the action's `prs`
+   output).
+2. **The repository allows auto-merge** (`allow_auto_merge` in
+   `gh api repos/<owner>/<repo>`). This repository setting is the
+   per-repository opt-in switch. `scripts/enable-auto-merge.sh` turns it on
+   across the fleet; turning it off in a repository's settings opts that
+   repository out without touching its workflow.
+3. **The target branch requires at least one status check besides
+   `pr-title / pr-title`**, counting both the active rulesets
+   (`gh api repos/<r>/rules/branches/<branch>`, rule type
+   `required_status_checks`) and classic branch protection. pr-title passes the
+   moment the PR opens, so on a branch that requires nothing else a release PR
+   would merge before any build ran.
+
+When condition 2 or 3 does not hold, the step logs a `::notice::` saying which
+one and exits 0. A run with no release PR, the common case, logs a plain line.
+`auto-merge: false` on the caller opts out explicitly.
+
+**Merge method.** `--squash` when the repository allows squash merges, else
+`--merge` when it allows merge commits (`harness` allows only merge commits),
+else `--rebase`, read from `allow_squash_merge`, `allow_merge_commit` and
+`allow_rebase_merge`.
+
+**Idempotent.** A PR that already has auto-merge on is left alone, and still
+reports `enabled`. `gh pr merge --auto` merges on the spot rather than arming
+auto-merge when the PR is already mergeable. Because a required check exists,
+that happens only once every required check has passed, and the reason says
+"merged at once".
+
+**It deploys.** Merging a release PR is an ordinary merge to the default
+branch, so it deploys wherever deploy-on-main is wired, exactly as a hand merge
+of the same PR would. The merge is made by the App identity, not by
+`GITHUB_TOKEN`, so the push it makes starts the follow-up release run that tags
+the version.
+
+**Classic protection and the App's permissions.** The classic endpoint
+`repos/<r>/branches/<branch>/protection/required_status_checks` needs
+Administration read. With the permission set listed under "Secrets contract"
+it answers `403`. On any answer other than `404` (not protected), the step falls
+back to the classic summary that `repos/<r>/branches/<branch>` returns, which
+needs only Contents read. Only when both fail are the classic contexts treated
+as unknown, and then the rulesets alone must show a real check. On 2026-09-18
+both paths gave the same classic contexts for `kioku`, `harness` and
+`touchstone` when tested with a token limited to exactly those permissions.
+
+Outputs: `auto_merge` is `enabled`, `skipped` or `disabled`, and
+`auto_merge_reason` is one line saying why. The step is `continue-on-error`,
+because a convenience must never fail the job that publishing jobs `needs`.
+Every decision it makes exits 0. A crash still shows as a failed step and
+reads `skipped` with "the auto-merge step did not complete".
+
+Callers pin this workflow by SHA, so a repository picks the step up when its
+pin moves past the release that adds it.
 
 ### `pr-title.yml` — Conventional Commit PR titles
 
@@ -343,13 +407,14 @@ are never moved ([HAR-NAME-003]).
 
 ## Scripts
 
-All three default to a dry run and take `--apply` to write.
+All four default to a dry run and take `--apply` to write.
 
 | Script | What it does |
 |---|---|
 | `scripts/fanout-release-bot.sh` | Reads the App private key and client ID from 1Password and sets `APP_PRIVATE_KEY` / `APP_CLIENT_ID` on every repository in `fleet/repos.txt`. Idempotent, so it is also the rotation procedure. Values never touch disk, the terminal or an argument list. Each `op` call has a 20-second watchdog, because GNU `timeout` is not installed on the machine this runs from. |
 | `scripts/apply-rulesets.sh` | Creates or updates a repository ruleset named `main` from `fleet/rulesets.json`: `~DEFAULT_BRANCH`, active, blocking deletion and force-pushes, requiring a pull request (zero approvals — a solo account cannot approve its own PR) and requiring the listed status checks with a strict up-to-date policy. A create grants no bypass; an update keeps the bypass the repository already has unless `--reset-bypass` says otherwise. An entry marked `"skip": true` is reported and left untouched. |
 | `scripts/enable-immutable-releases.sh` | Turns on immutable releases through `PUT /repos/{owner}/{repo}/immutable-releases`, which makes a published tag impossible to move or delete — [HAR-NAME-003] enforced by the platform rather than by discipline. Repositories listed in `fleet/immutable-releases-exclude.txt` are reported as `SKIP` with their reason and never written to. |
+| `scripts/enable-auto-merge.sh` | Sets `allow_auto_merge=true` (`PATCH /repos/{owner}/{repo}`), the opt-in switch for [auto-merging release PRs](#auto-merge-of-the-release-pr), but only where the default branch requires a status check besides `pr-title / pr-title`. It uses the same check as the workflow step, in a function kept identical to the one in the step. A repository that fails the check, or is listed in `fleet/auto-merge-exclude.txt`, is reported as `SKIP` with the reason and never written to. It only turns the setting on, never off. |
 
 `fleet/rulesets.json` maps `owner/name` to an entry with three possible keys:
 
@@ -465,6 +530,14 @@ exclusion, because losing it would turn the setting on for precisely the
 repositories it breaks. `--exclude /dev/null` is the explicit way to exclude
 nothing. Delete an entry once its workflow attaches assets at creation time
 instead, which is the compatible shape.
+
+`fleet/auto-merge-exclude.txt` works the same way for
+`enable-auto-merge.sh`: one `owner/name` per line, with the reason after a
+`#`. A missing file is fatal, and `--exclude /dev/null` excludes nothing. It
+started empty. An entry keeps the script from turning auto-merge **on**. It
+does not turn the setting off. To opt a repository out, switch
+`allow_auto_merge` off in its settings (or pass `auto-merge: false` to the
+reusable workflow), then list it here so the next run leaves it off.
 
 ## This repository's own CI
 

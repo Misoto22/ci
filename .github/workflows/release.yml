@@ -49,6 +49,16 @@ on:
         required: false
         type: string
         default: main
+      auto-merge:
+        description: >-
+          Enable GitHub auto-merge on the release PR, so it merges itself once
+          the target branch's required checks pass. It only takes effect where
+          the repository allows auto-merge (the per-repository opt-in switch)
+          and the target branch requires at least one status check besides
+          `pr-title / pr-title`. Pass false to opt out explicitly.
+        required: false
+        type: boolean
+        default: true
     secrets:
       APP_PRIVATE_KEY:
         description: >-
@@ -87,6 +97,16 @@ on:
       pr:
         description: JSON object describing the release PR.
         value: ${{ jobs.release-please.outputs.pr }}
+      auto_merge:
+        description: >-
+          What happened to auto-merge on the release PR: `enabled` (turned on
+          now or already on), `skipped` (a condition did not hold, or there was
+          no release PR in this run) or `disabled` (the caller passed
+          auto-merge: false).
+        value: ${{ jobs.release-please.outputs.auto_merge }}
+      auto_merge_reason:
+        description: One line saying why auto_merge has the value it has.
+        value: ${{ jobs.release-please.outputs.auto_merge_reason }}
 
 jobs:
   release-please:
@@ -106,6 +126,10 @@ jobs:
       prs_created: ${{ steps.rp.outputs.prs_created }}
       paths_released: ${{ steps.rp.outputs.paths_released }}
       pr: ${{ steps.rp.outputs.pr }}
+      # The fallbacks cover a step that crashed (continue-on-error) or never
+      # ran, so a caller never reads an empty value.
+      auto_merge: ${{ steps.auto-merge.outputs.auto_merge || 'skipped' }}
+      auto_merge_reason: ${{ steps.auto-merge.outputs.auto_merge_reason || 'the auto-merge step did not complete; read its log' }}
     steps:
       - name: Mint a GitHub App token
         id: app-token
@@ -171,3 +195,206 @@ jobs:
             fi
           done
           exit "$missing"
+
+      - name: Enable auto-merge on the release PR
+        # Lets the bot's release PR merge itself once the target branch's
+        # required checks pass. Three conditions, all read live:
+        #   (a) release-please opened or updated a release PR in this run;
+        #   (b) the repository allows auto-merge — that repository setting is
+        #       the per-repository opt-in switch
+        #       (scripts/enable-auto-merge.sh sets it);
+        #   (c) the target branch requires at least one status check besides
+        #       `pr-title / pr-title`, from its rulesets or its classic branch
+        #       protection. pr-title passes the moment the PR opens, so without
+        #       a real check the PR would merge before any build ran.
+        # (b) or (c) not holding is a ::notice:: saying which, and exit 0; no
+        # release PR at all, the common case, is a plain log line.
+        #
+        # Merging a release PR is an ordinary merge to the default branch, so
+        # it deploys wherever deploy-on-main is wired, exactly as a hand merge
+        # would. The merge is performed as the App, which (unlike
+        # GITHUB_TOKEN) does start the follow-up release run that tags it.
+        #
+        # continue-on-error: auto-merge is a convenience and must never fail
+        # the job that publishing jobs `needs`. Its own decisions all exit 0;
+        # this only catches a crash, which still shows as a failed step.
+        id: auto-merge
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          AUTO_MERGE: ${{ inputs.auto-merge }}
+          PRS_CREATED: ${{ steps.rp.outputs.prs_created }}
+          PRS_JSON: ${{ steps.rp.outputs.prs }}
+          TARGET_BRANCH: ${{ inputs.target-branch }}
+        run: |
+          set -Eeuo pipefail
+          trap 'printf "::warning title=Auto-merge step failed::unexpected error on line %s; the release itself is unaffected\n" "$LINENO"' ERR
+
+          readonly IGNORED_CONTEXT='pr-title / pr-title'
+          # Not readonly: required_contexts declares its own local `repo`.
+          repo="$GITHUB_REPOSITORY"
+
+          # Every way out of this step goes through here, so the outputs are
+          # never left empty.
+          finish() {
+            printf 'auto_merge=%s\n' "$1" >> "$GITHUB_OUTPUT"
+            printf 'auto_merge_reason=%s\n' "$2" >> "$GITHUB_OUTPUT"
+            printf 'auto-merge: %s - %s\n' "$1" "$2"
+            exit 0
+          }
+
+          skip_with_notice() {
+            printf '::notice title=Auto-merge skipped::%s\n' "$1"
+            finish skipped "$1"
+          }
+
+          # --- keep merge_method and required_contexts identical to
+          # --- scripts/enable-auto-merge.sh. This step runs in the caller's
+          # --- checkout, so it cannot source that script.
+
+          # Print the flag `gh pr merge` takes for this repository: squash when
+          # the repository allows it, else a merge commit, else rebase.
+          merge_method() {
+            printf '%s' "$1" | jq -r '
+              if .allow_squash_merge == true then "squash"
+              elif .allow_merge_commit == true then "merge"
+              else "rebase" end'
+          }
+
+          # Set REQUIRED_CONTEXTS to the status checks BRANCH requires, one per
+          # line, sorted, without IGNORED_CONTEXT: the union of the active
+          # rulesets and classic branch protection. Set CLASSIC_STATE to where
+          # the classic half came from: `protection` (the protection endpoint),
+          # `branch` (the branch endpoint's summary, used when the protection
+          # endpoint refuses a token without Administration read), `none` (no
+          # classic protection) or `unreadable`. Return 1 when the rulesets
+          # themselves could not be read.
+          required_contexts() {
+            local repo="$1" branch="$2" rules classic="" body status
+            REQUIRED_CONTEXTS=""
+            CLASSIC_STATE="unreadable"
+            rules="$(gh api --paginate "repos/${repo}/rules/branches/${branch}" --jq '
+              .[] | select(.type == "required_status_checks")
+              | .parameters.required_status_checks[].context' 2>/dev/null)" || return 1
+            if body="$(gh api "repos/${repo}/branches/${branch}/protection/required_status_checks" \
+                --jq '(.contexts // [])[], ((.checks // [])[] | .context)' 2>/dev/null)"; then
+              classic="$body"
+              CLASSIC_STATE="protection"
+            else
+              # On an HTTP error gh prints the error document on stdout; its
+              # status separates an unprotected branch (404) from a token that
+              # may not look (403).
+              status="$(printf '%s' "$body" | jq -r '.status // empty' 2>/dev/null)" || status=""
+              if [ "$status" = "404" ]; then
+                CLASSIC_STATE="none"
+              elif body="$(gh api "repos/${repo}/branches/${branch}" --jq '
+                  .protection.required_status_checks // {}
+                  | select(.enforcement_level != "off") | (.contexts // [])[]' 2>/dev/null)"; then
+                classic="$body"
+                CLASSIC_STATE="branch"
+              fi
+            fi
+            REQUIRED_CONTEXTS="$(printf '%s\n%s\n' "$rules" "$classic" |
+              grep -vxF -e "$IGNORED_CONTEXT" -e '' | sort -u)" || REQUIRED_CONTEXTS=""
+          }
+
+          # --- end of the shared functions
+
+          if [ "$AUTO_MERGE" != "true" ]; then
+            finish disabled "the caller passed auto-merge: false"
+          fi
+
+          # (a) A release PR was opened or updated in this run.
+          if [ "$PRS_CREATED" != "true" ]; then
+            finish skipped "release-please opened or updated no release PR in this run"
+          fi
+          mapfile -t numbers < <(printf '%s' "$PRS_JSON" | jq -r '.[].number')
+          if [ "${#numbers[@]}" -eq 0 ]; then
+            skip_with_notice "release-please reported a release PR but its prs output names no PR number"
+          fi
+
+          # (b) The repository setting is the per-repository opt-in switch.
+          if ! repo_json="$(gh api "repos/${repo}")"; then
+            skip_with_notice "could not read the settings of ${repo}"
+          fi
+          allow="$(printf '%s' "$repo_json" | jq -r '.allow_auto_merge')"
+          method="$(merge_method "$repo_json")"
+          printf 'settings: allow_auto_merge=%s, merge method would be --%s\n' "$allow" "$method"
+          if [ "$allow" != "true" ]; then
+            skip_with_notice "${repo} does not allow auto-merge (allow_auto_merge=${allow}); turning that repository setting on is the opt-in"
+          fi
+
+          # (c) A real required check, or the PR merges before anything built.
+          if ! required_contexts "$repo" "$TARGET_BRANCH"; then
+            skip_with_notice "could not read the rulesets on ${TARGET_BRANCH}; not enabling auto-merge blind"
+          fi
+          printf 'required checks on %s besides %s (classic protection: %s):\n' \
+            "$TARGET_BRANCH" "$IGNORED_CONTEXT" "$CLASSIC_STATE"
+          printf '%s\n' "${REQUIRED_CONTEXTS:-(none)}" | sed 's/^/  /'
+          if [ -z "$REQUIRED_CONTEXTS" ]; then
+            why="${TARGET_BRANCH} requires no status check besides ${IGNORED_CONTEXT}, so the release PR would merge before any build ran"
+            if [ "$CLASSIC_STATE" = "unreadable" ]; then
+              why="${why} (classic branch protection could not be read)"
+            fi
+            skip_with_notice "$why"
+          fi
+
+          enabled=0
+          notes=()
+          for number in "${numbers[@]}"; do
+            # Idempotent: a PR that already has auto-merge on is left alone.
+            if ! pr_state="$(gh pr view "$number" --repo "$repo" --json state,autoMergeRequest \
+                --jq 'if .autoMergeRequest != null then "ARMED" else .state end')"; then
+              printf '::warning title=Auto-merge not enabled::could not read PR #%s\n' "$number"
+              notes+=("#${number}: could not read it")
+              continue
+            fi
+            case "$pr_state" in
+              ARMED)
+                enabled=$((enabled + 1))
+                notes+=("#${number}: auto-merge was already on")
+                continue
+                ;;
+              OPEN) ;;
+              *)
+                notes+=("#${number}: is ${pr_state}")
+                continue
+                ;;
+            esac
+
+            if ! err="$(gh pr merge "$number" --repo "$repo" --auto "--${method}" 2>&1)"; then
+              printf '::warning title=Auto-merge not enabled::gh pr merge --auto --%s on #%s failed: %s\n' \
+                "$method" "$number" "$(printf '%s' "$err" | tr '\n' ' ')"
+              notes+=("#${number}: gh pr merge --auto failed")
+              continue
+            fi
+
+            # gh merges at once instead of arming auto-merge when the PR is
+            # already mergeable (CLEAN, UNSTABLE or HAS_HOOKS). With a required
+            # check in place that means every required check has passed, so it
+            # is the same outcome, only sooner.
+            after="$(gh pr view "$number" --repo "$repo" --json state,autoMergeRequest \
+              --jq 'if .state == "MERGED" then "merged" elif .autoMergeRequest != null then "armed" else "unconfirmed" end')" ||
+              after="unconfirmed"
+            case "$after" in
+              armed)
+                enabled=$((enabled + 1))
+                notes+=("#${number}: auto-merge enabled (--${method})")
+                ;;
+              merged)
+                enabled=$((enabled + 1))
+                notes+=("#${number}: merged at once (--${method}), its required checks had already passed")
+                ;;
+              *)
+                printf '::warning title=Auto-merge not confirmed::gh pr merge --auto on #%s exited 0 but the PR shows neither auto-merge nor a merge\n' "$number"
+                notes+=("#${number}: auto-merge not confirmed")
+                ;;
+            esac
+          done
+
+          summary="$(printf '%s; ' "${notes[@]}")"
+          summary="${summary%; }"
+          if [ "$enabled" -gt 0 ]; then
+            finish enabled "$summary"
+          fi
+          skip_with_notice "$summary"

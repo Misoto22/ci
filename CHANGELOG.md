@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.0](https://github.com/Misoto22/ci/compare/v0.5.0...v0.6.0) (2026-09-18)
+
+
+### Features
+
+* **fleet:** require pr-title on career-ops, slatecourt, servo-map and Shiplog ([#10](https://github.com/Misoto22/ci/issues/10)) ([160d878](https://github.com/Misoto22/ci/commit/160d87833aa32b3a76a8c06a71a00e15c198bd62))
+
 ## [0.5.0](https://github.com/Misoto22/ci/compare/v0.4.0...v0.5.0) (2026-09-18)
 
 

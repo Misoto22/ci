@@ -6,12 +6,15 @@
     ]
   },
   "Misoto22/kioku-ios": {
-    "checks": [],
-    "note": "No required context: the only workflow is testflight.yml, which triggers on push to main and workflow_dispatch. Nothing runs on a pull request, and the repository has never had one."
+    "checks": [
+      "Build",
+      "pr-title / pr-title"
+    ],
+    "note": "Build comes from ci.yml (pull request #1): a bare pull_request trigger with no paths filter and no job-level if:, green on every pull request since, Dependabot #2 included. It runs on the self-hosted macOS runner (kioku-ios-mac), so a pull request cannot merge while that machine is offline. pr-title / pr-title has reported green on #2 through #10 since its caller landed in #1. testflight.yml is still push-to-main and workflow_dispatch only."
   },
   "Misoto22/kioku": {
     "checks": [],
-    "note": "Classic branch protection owns main here and already requires check, Console and docs. Reconcile the two before moving the contexts into this ruleset."
+    "note": "Classic branch protection owns main here and already requires check, Console, docs and pr-title / pr-title. Reconcile the two before moving the contexts into this ruleset."
   },
   "Misoto22/harness": {
     "checks": [],
@@ -22,8 +25,10 @@
     "note": "Classic branch protection owns main here and already requires Python 3.12, Python 3.13, Distribution and pr-title / pr-title. Reconcile the two before moving the contexts into this ruleset."
   },
   "Misoto22/misoto22-site": {
-    "checks": [],
-    "note": "No required context yet: .github/workflows/ci.yml carries paths-ignore (content/, docs/, public/, **.md, .gitignore, LICENSE) on both push and pull_request, so a docs-only pull request produces no CI run at all and a required check would sit pending forever and block the merge. There is no pr-title caller here either. The contexts get decided in this repository's own release-bot pull request, together with whatever always-reports job carries them."
+    "checks": [
+      "pr-title / pr-title"
+    ],
+    "note": "No CI context: .github/workflows/ci.yml still carries paths-ignore (content/, docs/, public/, **.md, .gitignore, LICENSE) on both push and pull_request, so a docs-only pull request produces no CI run at all and a required ci, docs, just-check or e2e context would sit pending forever and block the merge. mutation.yml and the harness-rendered misoto-harness.yml (rules) are paths-filtered too. pr-title / pr-title is unconditional and has reported green on #400, #401 and the updated Dependabot #393 since its caller landed in #399."
   },
   "Misoto22/folio": {
     "skip": true,
@@ -49,7 +54,7 @@
   },
   "Misoto22/Shiplog": {
     "checks": [],
-    "note": "No required context yet: Verify is unconditional on main today, but Shiplog pull request #4 adds paths-ignore (**.md, docs/**, LICENSE, .gitignore) to both triggers of ci.yml to cap hosted macOS minutes, so a docs-only pull request will produce no run and a required Verify would sit pending forever. That pull request says so itself. There is no pr-title caller here either; add that context once one exists and has reported."
+    "note": "No required context yet. Verify cannot be required: pull request #4 (merged) put paths-ignore (**.md, docs/**, LICENSE, .gitignore) on both triggers of ci.yml to cap hosted macOS minutes, so a docs-only pull request produces no run and a required Verify would sit pending forever. pr-title / pr-title has a caller since #4, but the only pull request since, Dependabot #5, fails it: 'Bump actions/checkout from 5.1.0 to 7.0.1 in the workflow-actions group' carries no Conventional Commit type, because .github/dependabot.yml sets no commit-message prefix. Requiring it now would block every Dependabot pull request; add it once it has reported green."
   },
   "Misoto22/trading-research": {
     "checks": [
@@ -69,11 +74,13 @@
   },
   "Misoto22/misoto22-admin-ios": {
     "checks": [],
-    "note": "No required context yet: the only one is `rules`, from the harness-rendered misoto-harness.yml (version=0.2.15), which is unconditional in the copy committed here but conditional in what harness renders now — Misoto22/harness pull request #33 restricted the template's pull_request and push triggers to the paths the drift check reads (.rulesync/**, rulesync.jsonc, rulesync.lock.json, the root and nested AGENTS.md / CLAUDE.md / GEMINI.md, .cursor/rules/**, and the workflow file itself). This repository picks that up at its next `misoto-harness sync --apply`, after which `rules` no longer reports on every pull request. Re-survey then. There is no pr-title caller here either."
+    "note": "No required context: the only workflow is the harness-rendered misoto-harness.yml, and since harness 0.4.0 (adopted in #7) its pull_request trigger is restricted to the paths the drift check reads (.rulesync/**, rulesync.jsonc, rulesync.lock.json, the root and nested AGENTS.md / CLAUDE.md / GEMINI.md, .cursor/rules/**, and the workflow file itself), so `rules` does not report on every pull request and can never be required. There is no pr-title caller either — .github/workflows/pr-title.yml does not exist on main. Add one; require pr-title / pr-title once it has reported green on a later pull request."
   },
   "Misoto22/misoto22-admin": {
-    "checks": [],
-    "note": "No required context yet: the only one is `rules`, from the harness-rendered misoto-harness.yml (version=0.2.15), which is unconditional in the copy committed here but conditional in what harness renders now — Misoto22/harness pull request #33 restricted the template's pull_request and push triggers to the paths the drift check reads. This repository picks that up at its next `misoto-harness sync --apply`. A node CI job is also planned here, which would add an unconditional context worth requiring; re-survey once both have landed. There is no pr-title caller here either."
+    "checks": [
+      "pr-title / pr-title"
+    ],
+    "note": "`rules` cannot be required: the harness-rendered misoto-harness.yml has been paths-filtered since harness 0.4.0 (adopted in #11). There is still no pull-request build job — deploy.yml's validate job runs on push to main only — so pr-title / pr-title, green on #10, #11 and #12 since its caller landed in #9, is the only context that reports on every pull request. Re-survey once a pull-request CI job lands."
   },
   "Misoto22/portrait-lora-pipeline": {
     "checks": [
@@ -85,8 +92,10 @@
     ]
   },
   "Misoto22/zhaojian": {
-    "checks": [],
-    "note": "No required context yet: .github/workflows/ci.yml carries paths-ignore (**.md, docs/, LICENSE, .gitignore) on both push and pull_request, so a docs-only pull request produces no CI run at all and a required check would sit pending forever and block the merge. There is no pr-title caller here either. The contexts get decided in this repository's own release-bot pull request, together with whatever always-reports job carries them."
+    "checks": [
+      "pr-title / pr-title"
+    ],
+    "note": "No CI context: .github/workflows/ci.yml still carries paths-ignore (**.md, docs/, LICENSE, .gitignore) on both push and pull_request, so a docs-only pull request produces no CI run at all and a required check would sit pending forever and block the merge. pr-title / pr-title is unconditional and reported green on Dependabot #114, the first pull request after its caller landed in #113."
   },
   "Misoto22/eoi-points-calculator": {
     "checks": [
@@ -107,7 +116,7 @@
     "checks": [
       "changes"
     ],
-    "note": "changes is the only unconditional job: api, web and contract are gated on its dorny/paths-filter outputs, e2e needs web, deploy is push-only, and ios.yml is paths-filtered to apps/ios. pr-title not yet reported — there is no pr-title caller workflow."
+    "note": "changes is the only unconditional job: api, web and contract are gated on its dorny/paths-filter outputs, e2e needs web, deploy is push-only, and ios.yml is paths-filtered to apps/ios. pr-title not yet reported: its caller landed in #91 and no pull request has been opened since; the open Dependabot pull requests (#83–#90) predate it and have not been updated. Add it on the next pass."
   },
   "Misoto22/servo-map": {
     "checks": [
@@ -116,7 +125,7 @@
       "Test",
       "Build Web"
     ],
-    "note": "pr-title not yet reported: this repository has no pr-title caller workflow."
+    "note": "pr-title / pr-title not required: its caller landed in #19, and the only pull request since, Dependabot #20, fails it — 'chore: Bump the actions group with 3 updates' breaks the lowercase-subject rule although .github/dependabot.yml sets the chore prefix. Requiring it now would block every Dependabot pull request; add it once it has reported green."
   },
   "Misoto22/kairos": {
     "checks": [

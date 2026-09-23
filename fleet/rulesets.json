@@ -172,8 +172,10 @@
     "note": "pr-title not yet reported: .github/workflows/pr-title.yml here is the reusable definition (workflow_call), not a caller, so this repository produces no pr-title / pr-title context of its own."
   },
   "jade-pet/jade-macos": {
-    "checks": [],
-    "note": "No required context: ci.yml carries paths-ignore (**.md, docs/**, assets/**, LICENSE, .gitignore) on both push and pull_request to cap hosted macOS minutes, so a docs-only pull request produces no Verify run and a required CI / Verify would sit pending forever. pr-title / pr-title reports on every pull request (green on release PR #30) and can be added once the ruleset exists."
+    "checks": [
+      "pr-title / pr-title"
+    ],
+    "note": "pr-title / pr-title only. CI / Verify cannot be required: ci.yml carries paths-ignore (**.md, docs/**, assets/**, LICENSE, .gitignore) on both push and pull_request to cap hosted macOS minutes, so a docs-only pull request produces no Verify run at all, and GitHub never counts a required check that did not run as satisfied, so it would sit pending forever and block the merge. pr-title / pr-title is unconditional, reports on every pull request, and has been green on release PR #30 and on #31 and #32 since."
   },
   "jade-pet/jade-ios": {
     "skip": true,

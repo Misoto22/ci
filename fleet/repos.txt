@@ -40,3 +40,12 @@ Misoto22/astra
 Misoto22/lumia-crystal-site
 Misoto22/erp-modern
 Misoto22/ci
+
+# The jade-pet organization. jade-pet/.github (profile and shared workflows) and
+# the archived jade-desktop-prototype hold no releasable software.
+jade-pet/jade-macos
+jade-pet/jade-ios
+jade-pet/jade-web
+jade-pet/jade-backend
+jade-pet/jade-docs
+jade-pet/jade-brand

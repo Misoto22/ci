@@ -73,6 +73,11 @@ is also the key-rotation procedure.
 a rotation should look like before and after. Re-run it whenever the App key is
 rotated or a repository is added to `fleet/repos.txt`.
 
+The jade-pet organization's six repositories joined `fleet/repos.txt` on
+2026-09-23: `jade-macos` already carried both values, and the other five were
+fanned out that day (5 ok, 0 failed). The App is installed on jade-pet with
+**All repositories** as well.
+
 The App itself is `misoto22-release-bot`, installed on the account with
 **All repositories** so it covers repositories created later. Its permissions
 are Metadata read, Contents read/write, Pull requests read/write and Issues

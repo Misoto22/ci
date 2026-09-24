@@ -13,4 +13,4 @@
 
 Misoto22/career-ops # .github/workflows/sbom.yml runs on `release: published` and its whole job is `gh release upload` back onto that release
 Misoto22/skills # .github/workflows/release.yml takes a `gh release upload --clobber` branch whenever a release for the tag already exists: a re-run, a re-dispatch or a retry
-jade-pet/jade-macos # .github/workflows/publish.yml runs on `release: published` and uploads the DMG, zip and checksums onto that release with `gh release upload --clobber`
+jade-the-cat/jade-macos # .github/workflows/publish.yml runs on `release: published` and uploads the DMG, zip and checksums onto that release with `gh release upload --clobber`

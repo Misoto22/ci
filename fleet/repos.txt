@@ -41,11 +41,12 @@ Misoto22/lumia-crystal-site
 Misoto22/erp-modern
 Misoto22/ci
 
-# The jade-pet organization. jade-pet/.github (profile and shared workflows) and
-# the archived jade-desktop-prototype hold no releasable software.
-jade-pet/jade-macos
-jade-pet/jade-ios
-jade-pet/jade-web
-jade-pet/jade-backend
-jade-pet/jade-docs
-jade-pet/jade-brand
+# The jade-the-cat organization (called jade-pet until 2026-09-24).
+# jade-the-cat/.github (profile and shared workflows) and the archived
+# jade-desktop-prototype hold no releasable software.
+jade-the-cat/jade-macos
+jade-the-cat/jade-ios
+jade-the-cat/jade-web
+jade-the-cat/jade-backend
+jade-the-cat/jade-docs
+jade-the-cat/jade-brand

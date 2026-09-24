@@ -171,29 +171,29 @@
     ],
     "note": "pr-title not yet reported: .github/workflows/pr-title.yml here is the reusable definition (workflow_call), not a caller, so this repository produces no pr-title / pr-title context of its own."
   },
-  "jade-pet/jade-macos": {
+  "jade-the-cat/jade-macos": {
     "checks": [
       "pr-title / pr-title"
     ],
     "note": "pr-title / pr-title only. CI / Verify cannot be required: ci.yml carries paths-ignore (**.md, docs/**, assets/**, LICENSE, .gitignore) on both push and pull_request to cap hosted macOS minutes, so a docs-only pull request produces no Verify run at all, and GitHub never counts a required check that did not run as satisfied, so it would sit pending forever and block the merge. pr-title / pr-title is unconditional, reports on every pull request, and has been green on release PR #30 and on #31 and #32 since."
   },
-  "jade-pet/jade-ios": {
+  "jade-the-cat/jade-ios": {
     "skip": true,
     "note": "Skipped: private repository in the jade-pet organization on the GitHub Free plan, where rulesets and branch protection answer 403 (\"Upgrade to GitHub Pro or make this repository public\"). The release PR therefore never auto-merges here and is merged by hand."
   },
-  "jade-pet/jade-web": {
+  "jade-the-cat/jade-web": {
     "skip": true,
     "note": "Skipped: private repository in the jade-pet organization on the GitHub Free plan, where rulesets and branch protection answer 403 (\"Upgrade to GitHub Pro or make this repository public\"). The release PR therefore never auto-merges here and is merged by hand."
   },
-  "jade-pet/jade-backend": {
+  "jade-the-cat/jade-backend": {
     "skip": true,
     "note": "Skipped: private repository in the jade-pet organization on the GitHub Free plan, where rulesets and branch protection answer 403 (\"Upgrade to GitHub Pro or make this repository public\"). The release PR therefore never auto-merges here and is merged by hand."
   },
-  "jade-pet/jade-docs": {
+  "jade-the-cat/jade-docs": {
     "skip": true,
     "note": "Skipped: private repository in the jade-pet organization on the GitHub Free plan, where rulesets and branch protection answer 403 (\"Upgrade to GitHub Pro or make this repository public\"). The release PR therefore never auto-merges here and is merged by hand."
   },
-  "jade-pet/jade-brand": {
+  "jade-the-cat/jade-brand": {
     "skip": true,
     "note": "Skipped: private repository in the jade-pet organization on the GitHub Free plan, where rulesets and branch protection answer 403 (\"Upgrade to GitHub Pro or make this repository public\"). The release PR therefore never auto-merges here and is merged by hand."
   }

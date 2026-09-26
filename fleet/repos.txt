@@ -45,7 +45,7 @@ Misoto22/ci
 # jade-the-cat/.github (profile and shared workflows) and the archived
 # jade-desktop-prototype hold no releasable software.
 jade-the-cat/jade-macos
-jade-the-cat/jade-ios
+jade-the-cat/jade
 jade-the-cat/jade-web
 jade-the-cat/jade-backend
 jade-the-cat/jade-docs

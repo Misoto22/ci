@@ -175,7 +175,7 @@
     "skip": true,
     "note": "Skipped: private repository since 2026-09-24 in the jade-the-cat organization on the GitHub Free plan, where rulesets and branch protection answer 403 (\"Upgrade to GitHub Pro or make this repository public\"). The release PR therefore never auto-merges here and is merged by hand."
   },
-  "jade-the-cat/jade-ios": {
+  "jade-the-cat/jade": {
     "skip": true,
     "note": "Skipped: private repository in the jade-the-cat organization on the GitHub Free plan, where rulesets and branch protection answer 403 (\"Upgrade to GitHub Pro or make this repository public\"). The release PR therefore never auto-merges here and is merged by hand."
   },

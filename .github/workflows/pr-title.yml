@@ -85,6 +85,10 @@ on:
 
 jobs:
   pr-title:
+    # Dependabot always writes "chore: Bump …" with a capital B, which the subject rule rejects, and
+    # its titles cannot be configured. A skipped job satisfies a required status check, so its PRs
+    # pass without a hand edit; every other author is still checked.
+    if: github.event.pull_request.user.login != 'dependabot[bot]'
     runs-on: ubuntu-latest
     permissions:
       pull-requests: read

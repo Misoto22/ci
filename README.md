@@ -51,6 +51,10 @@ string — not a bare `pr-title` — is what belongs in a ruleset's
 `release-please`, `pr-title`, `python-ci`, `node-ci`, `swift-package-ci`,
 `ghcr-retag` and `docker-publish`.
 
+`pr-title` skips pull requests opened by Dependabot. Its titles always read
+"chore: Bump …" and cannot be configured, and a skipped job satisfies the
+required check, so those PRs merge without a hand edit.
+
 ## Secrets contract
 
 A personal GitHub account has **no account-level Actions secrets or variables**

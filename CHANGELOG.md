@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.2](https://github.com/Misoto22/ci/compare/v0.7.1...v0.7.2) (2026-09-30)
+
+
+### Bug Fixes
+
+* **pr-title:** skip pull requests opened by Dependabot ([#22](https://github.com/Misoto22/ci/issues/22)) ([1f51c67](https://github.com/Misoto22/ci/commit/1f51c678eb6a47e99eb6871604be80b37060ad7b))
+
 ## [0.7.1](https://github.com/Misoto22/ci/compare/v0.7.0...v0.7.1) (2026-09-18)
 
 

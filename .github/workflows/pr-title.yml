@@ -73,6 +73,15 @@ on:
           The subject "{subject}" in the PR title "{title}" must start with a
           lowercase letter and be written in the imperative mood, for example
           "add device auth" rather than "Added device auth".
+      runs-on:
+        description: >-
+          JSON array of runner labels, consumed with fromJSON. A reusable
+          workflow cannot take a list input, hence the JSON string. The job
+          holds only a read-only token, so a third-party runner such as
+          Ubicloud may run it.
+        required: false
+        type: string
+        default: '["ubuntu-latest"]'
       ignore-labels:
         description: >-
           Newline-delimited labels that skip validation. Defaults to
@@ -89,7 +98,7 @@ jobs:
     # its titles cannot be configured. A skipped job satisfies a required status check, so its PRs
     # pass without a hand edit; every other author is still checked.
     if: github.event.pull_request.user.login != 'dependabot[bot]'
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJSON(inputs.runs-on) }}
     permissions:
       pull-requests: read
     steps:

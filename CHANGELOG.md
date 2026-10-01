@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.0](https://github.com/Misoto22/ci/compare/v0.7.2...v0.8.0) (2026-10-01)
+
+
+### Features
+
+* **pr-title:** accept a runs-on input ([#24](https://github.com/Misoto22/ci/issues/24)) ([8f17b70](https://github.com/Misoto22/ci/commit/8f17b709d74fe17e86eccb8951cf1c929f0be152))
+
 ## [0.7.2](https://github.com/Misoto22/ci/compare/v0.7.1...v0.7.2) (2026-09-30)
 
 

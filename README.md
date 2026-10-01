@@ -55,6 +55,11 @@ string — not a bare `pr-title` — is what belongs in a ruleset's
 "chore: Bump …" and cannot be configured, and a skipped job satisfies the
 required check, so those PRs merge without a hand edit.
 
+`pr-title` takes the same `runs-on` JSON-string input as `node-ci` (default
+`'["ubuntu-latest"]'`). Its job holds only a read-only token, so a private
+repository can pass `'["ubicloud-standard-2"]'` and keep the check off its
+GitHub-hosted minutes.
+
 ## Secrets contract
 
 A personal GitHub account has **no account-level Actions secrets or variables**

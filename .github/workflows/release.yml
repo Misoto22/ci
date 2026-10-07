@@ -49,6 +49,16 @@ on:
         required: false
         type: string
         default: main
+      runs-on:
+        description: >-
+          JSON array of runner labels, consumed with fromJSON. A reusable
+          workflow cannot take a list input, hence the JSON string. The job
+          holds the release bot's private key, which can push tags and open
+          pull requests in the caller, but no production credential, so an
+          owner may move it to a third-party runner such as Ubicloud.
+        required: false
+        type: string
+        default: '["ubuntu-latest"]'
       auto-merge:
         description: >-
           Enable GitHub auto-merge on the release PR, so it merges itself once
@@ -110,7 +120,7 @@ on:
 
 jobs:
   release-please:
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJSON(inputs.runs-on) }}
     permissions:
       contents: write
       pull-requests: write

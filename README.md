@@ -60,6 +60,10 @@ required check, so those PRs merge without a hand edit.
 repository can pass `'["ubicloud-standard-2"]'` and keep the check off its
 GitHub-hosted minutes.
 
+`release` takes the same input. Its job holds the release bot's private key (it can push tags and
+open pull requests in the caller) but no production credential, so an owner who accepts that key on
+a third-party runner can pass `'["ubicloud-standard-2"]'`; the default stays GitHub-hosted.
+
 ## Secrets contract
 
 A personal GitHub account has **no account-level Actions secrets or variables**
@@ -132,6 +136,7 @@ jobs:
       # manifest-file: .release-please-manifest.json  (default)
       # target-branch: main                           (default)
       # auto-merge:    true                           (default)
+      # runs-on:       '["ubuntu-latest"]'            (default)
     secrets:
       APP_PRIVATE_KEY: ${{ secrets.APP_PRIVATE_KEY }}
 ```

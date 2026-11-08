@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.10.0](https://github.com/Misoto22/ci/compare/v0.9.0...v0.10.0) (2026-11-08)
+
+
+### Features
+
+* **harness:** serve the Misoto Harness rules job and its checkers ([#30](https://github.com/Misoto22/ci/issues/30)) ([4aa358d](https://github.com/Misoto22/ci/commit/4aa358ddaa1226090d7b2794313d0a7b2fef8bb1))
+
 ## [0.9.0](https://github.com/Misoto22/ci/compare/v0.8.0...v0.9.0) (2026-10-07)
 
 

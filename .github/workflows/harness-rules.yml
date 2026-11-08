@@ -1,0 +1,71 @@
+# Reusable: the Misoto Harness `rules` job for a governed repository.
+#
+# Why it lives here: Harness is private and governs repositories under several owners, so a
+# consumer cannot read Harness's own workflows or files. This public repository serves the job
+# and every released checker instead (Harness ADR 0004). The consumer's rendered
+# `.github/workflows/misoto-harness.yml` only calls this file, so a Harness release that changes
+# the checker or an action pin no longer has to rewrite every consumer's workflow.
+#
+# Trust: the checker is fetched from `harness/checkers/<sha256>.py` and runs only when its sha256
+# equals the pin the consumer's own managed `.rulesync/checker.json` records. The branch it is
+# fetched from does not matter; the hash in the governed repository does.
+#
+# Check name: a caller whose job id is `rules` produces the context `rules / rules`.
+
+name: Misoto Harness rules (reusable)
+
+on:
+  workflow_call:
+    inputs:
+      runs-on:
+        description: >-
+          JSON array of runner labels, consumed with fromJSON. A reusable workflow cannot take a
+          list input, hence the JSON string. The job holds only a read-only token.
+        required: false
+        type: string
+        default: '["ubuntu-latest"]'
+
+permissions:
+  contents: read
+
+jobs:
+  rules:
+    runs-on: ${{ fromJSON(inputs.runs-on) }}
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # The checker walks the registry's whole history but opens only the .rulesync blobs,
+          # so the clone carries commits and trees and fetches those few blobs on demand.
+          fetch-depth: 0
+          filter: blob:none
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 26
+          # The rulesync toolchain installs through pnpm below; leave the consumer
+          # repository's own package manager cache alone.
+          package-manager-cache: false
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+        with:
+          package_json_file: .rulesync/package.json
+      - name: Fetch the checker this repository pins
+        run: |
+          sha=$(python3 -c 'import json; print(json.load(open(".rulesync/checker.json"))["sha256"])')
+          if ! [[ "${sha}" =~ ^[0-9a-f]{64}$ ]]; then
+            echo "::error file=.rulesync/checker.json::the checker pin is not a sha256"
+            exit 1
+          fi
+          url="https://raw.githubusercontent.com/Misoto22/ci/main/harness/checkers/${sha}.py"
+          if ! curl -fsSL --retry 3 "${url}" -o "${RUNNER_TEMP}/harness-check.py"; then
+            echo "::error::Misoto22/ci does not serve checker ${sha} yet; publish it before syncing"
+            exit 1
+          fi
+          echo "${sha}  ${RUNNER_TEMP}/harness-check.py" | sha256sum --check --strict -
+      - name: Check the Harness contract and repository policies
+        run: python3 "${RUNNER_TEMP}/harness-check.py"
+        env:
+          # A scheduled run has no event base, so it checks history up to its own commit.
+          MISOTO_HARNESS_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before || github.sha }}
+      - run: pnpm --dir .rulesync install --frozen-lockfile
+      - run: ./.rulesync/node_modules/.bin/rulesync generate --check --silent

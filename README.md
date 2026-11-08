@@ -314,6 +314,24 @@ description becomes the squash body, a description line that begins with a
 Conventional Commit header at column 0 (for example `fix: …`) would be parsed
 as an extra changelog entry the same way zhaojian's 672c96c body line was.
 
+### `harness-rules.yml` — the Misoto Harness `rules` job
+
+Misoto Harness renders the caller into every governed repository as
+`.github/workflows/misoto-harness.yml`; do not write one by hand.
+
+```yaml
+jobs:
+  rules:
+    uses: Misoto22/ci/.github/workflows/harness-rules.yml@<40-char-sha> # main 2026-11-08
+    with:
+      runs-on: '["ubuntu-latest"]'
+```
+
+The job checks out the repository with its history, fetches the checker
+`harness/checkers/<sha256>.py` that the repository's managed `.rulesync/checker.json` pins,
+refuses it unless the sha256 matches, runs it, and then runs `rulesync generate --check`. The
+check context is `rules / rules`. See [`harness/README.md`](harness/README.md).
+
 ### `python-ci.yml`
 
 ```yaml

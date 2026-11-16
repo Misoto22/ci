@@ -14,6 +14,7 @@
 Misoto22/touchstone-hosted-probe
 Misoto22/kioku-ios
 Misoto22/kioku
+Misoto22/kioku-console
 Misoto22/harness
 Misoto22/touchstone
 Misoto22/misoto22-site

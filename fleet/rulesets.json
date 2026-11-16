@@ -14,7 +14,14 @@
   },
   "Misoto22/kioku": {
     "checks": [],
-    "note": "Classic branch protection owns main here and already requires check, Console, docs and pr-title / pr-title. Reconcile the two before moving the contexts into this ruleset."
+    "note": "Classic branch protection owns main here and already requires check, docs and pr-title / pr-title. Its Console job moved to Misoto22/kioku-console with kioku PR #863, so the stale Console context has to come off that protection too. Reconcile the two before moving the contexts into this ruleset."
+  },
+  "Misoto22/kioku-console": {
+    "checks": [
+      "check",
+      "pr-title / pr-title"
+    ],
+    "note": "The operator console, moved out of Misoto22/kioku (kioku ADR 0049). check is ci.yml's only job (pnpm check on Linux, no paths filter and no job-level if:) and reported green on scaffolding pull request #1. pr-title / pr-title comes from the caller in pr-title.yml, a pull_request_target workflow that read from the base branch, so it did not report on #1 and first reports on the next pull request. It is required by owner instruction (2026-11-16), so apply the ruleset before that pull request only if it may sit pending until then."
   },
   "Misoto22/harness": {
     "checks": [],

@@ -558,6 +558,7 @@ protection has more gates than this column shows, as described after the table.
 | `touchstone-hosted-probe` | `test`, `pr-title / pr-title` |
 | `kioku-ios` | `Build`, `pr-title / pr-title` |
 | `kioku` | none |
+| `kioku-console` | `check`, `pr-title / pr-title` |
 | `harness` | none |
 | `touchstone` | none |
 | `misoto22-site` | `pr-title / pr-title` |

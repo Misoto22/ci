@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.11.0](https://github.com/Misoto22/ci/compare/v0.10.0...v0.11.0) (2026-11-21)
+
+
+### Features
+
+* **harness:** serve the checker that honours identity exceptions ([#34](https://github.com/Misoto22/ci/issues/34)) ([ddbfb69](https://github.com/Misoto22/ci/commit/ddbfb69a35dd5091f1d2ae8a3b34be156af522da))
+
 ## [0.10.0](https://github.com/Misoto22/ci/compare/v0.9.0...v0.10.0) (2026-11-08)
 
 

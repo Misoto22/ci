@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.12.0](https://github.com/Misoto22/ci/compare/v0.11.0...v0.12.0) (2026-11-26)
+
+
+### Features
+
+* **ios:** share the Swift source checks of the Misoto iOS apps ([#36](https://github.com/Misoto22/ci/issues/36)) ([54d8f4b](https://github.com/Misoto22/ci/commit/54d8f4b84e867e720affa476f120540f74332815))
+
 ## [0.11.0](https://github.com/Misoto22/ci/compare/v0.10.0...v0.11.0) (2026-11-21)
 
 

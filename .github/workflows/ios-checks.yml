@@ -1,0 +1,47 @@
+# Reusable: the shared Swift source checks for a Misoto iOS app (ios-checks/ in this repository).
+#
+# The app pins the checks' version once, in its own `ios-checks.toml` (`version = "X.Y.Z"`); this job reads that pin
+# and runs `misoto-ios-checks` from the matching tag of this repository, so a local run
+# (`scripts/ios-checks.sh`) and CI always run the same checks. Standard-library Python over the Swift sources: it
+# runs on Linux in seconds, before the Mac is free.
+#
+# Check name: "<caller job id> / ios-checks".
+
+name: iOS checks (reusable)
+
+on:
+  workflow_call:
+    inputs:
+      runs-on:
+        description: JSON array of runner labels, consumed with fromJSON.
+        required: false
+        type: string
+        default: '["ubuntu-latest"]'
+      working-directory:
+        description: Directory that holds ios-checks.toml.
+        required: false
+        type: string
+        default: "."
+
+permissions:
+  contents: read
+
+jobs:
+  ios-checks:
+    runs-on: ${{ fromJSON(inputs.runs-on) }}
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: ${{ inputs.working-directory }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
+      - name: Run the checks this app pins
+        run: |
+          version=$(python3 -c 'import tomllib; print(tomllib.load(open("ios-checks.toml", "rb"))["version"])')
+          if ! [[ "${version}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error file=ios-checks.toml::version must be X.Y.Z, got '${version}'"
+            exit 1
+          fi
+          uvx --from "git+https://github.com/Misoto22/ci@v${version}#subdirectory=ios-checks" misoto-ios-checks

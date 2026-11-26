@@ -49,7 +49,7 @@ produces the status-check context **`pr-title / pr-title`**, and that whole
 string — not a bare `pr-title` — is what belongs in a ruleset's
 `required_status_checks`. The called job names in this repository are
 `release-please`, `pr-title`, `python-ci`, `node-ci`, `swift-package-ci`,
-`ghcr-retag` and `docker-publish`.
+`ios-checks`, `ghcr-retag` and `docker-publish`.
 
 `pr-title` skips pull requests opened by Dependabot. Its titles always read
 "chore: Bump …" and cannot be configured, and a skipped job satisfies the
@@ -394,6 +394,24 @@ target and is tested on macOS. Splitting the logic out is what keeps macOS
 minutes — ten times the price of Linux — off every pull request.
 
 Resulting check: `package / swift-package-ci`.
+
+### `ios-checks.yml`
+
+```yaml
+jobs:
+  checks:
+    uses: Misoto22/ci/.github/workflows/ios-checks.yml@<sha> # v0.12.0
+```
+
+The Swift source checks every Misoto iOS app shares, from `ios-checks/` in this
+repository: a scene's content closure is `@Sendable`, a system callback runs
+where its isolation holds, production code does not trap on data (a per-file
+baseline that only falls), and every animation takes the app's motion
+vocabulary. The app pins the version once, in its own `ios-checks.toml`, and
+the job runs that tag, so a local run and CI run the same checks. See
+`ios-checks/README.md` for the configuration and the local script.
+
+Resulting check: `checks / ios-checks`.
 
 ### `ghcr-retag.yml`
 

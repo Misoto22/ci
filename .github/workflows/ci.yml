@@ -1,5 +1,6 @@
-# This repository ships nothing but YAML and shell, so the gate is: does the
-# YAML parse, do the workflows type-check, and is the shell sane.
+# This repository ships YAML, shell and one standard-library Python package
+# (ios-checks/), so the gate is: does the YAML parse, do the workflows
+# type-check, is the shell sane, and do the iOS checks pass their own tests.
 
 name: CI
 
@@ -54,3 +55,18 @@ jobs:
 
       - name: yamllint
         run: uvx yamllint@1.38.0 --strict .
+
+  ios-checks:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
+
+      - name: Test the iOS checks
+        run: python3 -m unittest discover -s ios-checks/tests -t ios-checks
+
+      - name: Install the package the way an app runs it
+        run: uvx --from ./ios-checks misoto-ios-checks --help

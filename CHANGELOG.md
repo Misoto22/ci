@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.12.1](https://github.com/Misoto22/ci/compare/v0.12.0...v0.12.1) (2026-11-27)
+
+
+### Documentation
+
+* **fleet:** name kioku-ios's new self-hosted runner ([#38](https://github.com/Misoto22/ci/issues/38)) ([640ef92](https://github.com/Misoto22/ci/commit/640ef9234503fe5e452521bda5e1df1773fc6bf9))
+
 ## [0.12.0](https://github.com/Misoto22/ci/compare/v0.11.0...v0.12.0) (2026-11-26)
 
 

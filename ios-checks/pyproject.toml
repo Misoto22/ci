@@ -1,6 +1,6 @@
 [project]
 name = "misoto-ios-checks"
-version = "0.12.0" # x-release-please-version
+version = "0.12.1" # x-release-please-version
 description = "Swift source checks shared by the Misoto iOS apps"
 requires-python = ">=3.11"
 dependencies = []

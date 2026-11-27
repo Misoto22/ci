@@ -14,7 +14,7 @@ import json
 import sys
 from pathlib import Path
 
-from . import __version__, callback_isolation, config, motion, scene_content, traps
+from . import __version__, callback_isolation, config, motion, motion_snaps, scene_content, sheet_material, traps
 from .swift_source import swift_files
 
 
@@ -68,6 +68,47 @@ def run(cfg: config.Config, names: list[str], update: bool = False) -> int:
                 failures = [f"{p}:{n}: {why}" for p, f in sorted(found.items()) for n, why in f]
             missing = [p for p in list(cfg.motion_allowed) + cfg.motion_vocabulary if not (cfg.root / p).is_file()]
             failures += [f"{p}: named in ios-checks.toml [motion] but not found" for p in missing]
+        elif name == motion_snaps.NAME:
+            scanned = {
+                p: found
+                for p, text in files
+                if (found := motion_snaps.hits(text, reduce_flags=cfg.motion_snaps_reduce_flags))
+            }
+            if cfg.motion_snaps_baseline:
+                baseline_path = cfg.root / cfg.motion_snaps_baseline
+                if update:
+                    failures = motion_snaps.update_baseline(scanned, baseline_path)
+                else:
+                    baseline = (
+                        json.loads(baseline_path.read_text(encoding="utf-8")).get("files", {})
+                        if baseline_path.exists()
+                        else {}
+                    )
+                    failures = motion_snaps.compare(scanned, baseline)
+            else:
+                failures = [
+                    f"{p}:{n}: {kind}; {motion_snaps.ADVICE[kind]}"
+                    for p, found in sorted(scanned.items())
+                    for n, kind in found
+                ]
+        elif name == sheet_material.NAME:
+            owners = set(cfg.sheet_material_owners)
+            allowed_bg = set(cfg.sheet_material_allowed_background)
+            allowed_detents = set(cfg.sheet_material_allowed_detents)
+            failures = [
+                f"{p}:{n}: {why}"
+                for p, text in files
+                for n, why in sheet_material.problems(
+                    p,
+                    text,
+                    owners=owners,
+                    allowed_background=allowed_bg,
+                    allowed_detents=allowed_detents,
+                    adopts_pattern=cfg.sheet_material_adopts,
+                    paper_colors=cfg.sheet_material_paper_colors,
+                    ui_paper_colors=cfg.sheet_material_ui_paper_colors,
+                )
+            ]
         else:
             raise SystemExit(f"unknown check {name}")
         if failures:

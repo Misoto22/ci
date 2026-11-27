@@ -108,6 +108,22 @@ class RunnerTests(unittest.TestCase):
         code, out = run(app({}, 'version = "0.12.0"\n'), "--version")
         self.assertEqual((code, out.strip()), (0, "0.12.0"))
 
+    def test_motion_snaps_and_sheet_material_run_when_configured(self):
+        toml = (
+            'checks = ["motion-snaps", "sheet-material"]\n'
+            '[sheet_material]\n'
+            'owners = ["Sources/SheetMaterial.swift"]\n'
+        )
+        ok_files = {
+            "Sources/SheetMaterial.swift": ".presentationDetents([.large])\n.presentationBackground(.clear)\n",
+            "Sources/Page.swift": "content.surfaceMaterialSheet()\n",
+        }
+        self.assertEqual(run(app(ok_files, toml))[0], 0)
+        bad_files = {
+            "Sources/Bad.swift": ".presentationBackground(.red)\nwithAnimation(nil) { x = 1 }\n",
+        }
+        self.assertEqual(run(app(bad_files, toml))[0], 1)
+
     def test_an_unknown_check_in_the_config_is_refused(self):
         with self.assertRaises(SystemExit):
             run(app({}, 'checks = ["nope"]\n'))

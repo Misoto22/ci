@@ -9,6 +9,8 @@ so they run on Linux in seconds and the same way on a Mac.
 | `callback-isolation` | `BGTaskScheduler.register` or `addObserver(forName:queue:)` is not on the main queue, or an inline `expirationHandler`, `progressHandler` or limited-library-picker completion is not `@Sendable` |
 | `traps` | a file holds more `try!`, `as!`, `fatalError(`, `preconditionFailure(`, `)!` or `]!` than its baseline (which only falls) |
 | `motion` | a curve outside the app's motion vocabulary, a bare `withAnimation { }`, or `.animation(_:)` without `value:` |
+| `motion-snaps` | (opt-in) `animation(nil`, non-Reduce-Motion ternary nil animation, `disablesAnimations = true`, `performWithoutAnimation`, or bare sheet-state `if`/`else` swaps |
+| `sheet-material` | (opt-in) `.presentationBackground(`, `.presentationDetents(`, or direct paper backgrounds outside the designated sheet-material owners |
 
 ## In an app
 

@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.13.0](https://github.com/Misoto22/ci/compare/v0.12.1...v0.13.0) (2026-11-27)
+
+
+### Features
+
+* **ios-checks:** add motion-snaps and sheet-material checks and AppleKit bump workflow ([#40](https://github.com/Misoto22/ci/issues/40)) ([403800c](https://github.com/Misoto22/ci/commit/403800cfe24f84d9d23ba1ac5c7072d75871ceea))
+
 ## [0.12.1](https://github.com/Misoto22/ci/compare/v0.12.0...v0.12.1) (2026-11-27)
 
 

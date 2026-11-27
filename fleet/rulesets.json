@@ -10,7 +10,7 @@
       "Build",
       "pr-title / pr-title"
     ],
-    "note": "Build comes from ci.yml (pull request #1): a bare pull_request trigger with no paths filter and no job-level if:, green on every pull request since, Dependabot #2 included. It runs on the self-hosted macOS runner (kioku-ios-mac), so a pull request cannot merge while that machine is offline. pr-title / pr-title has reported green on #2 through #10 since its caller landed in #1. testflight.yml is still push-to-main and workflow_dispatch only."
+    "note": "Build comes from ci.yml (pull request #1): a bare pull_request trigger with no paths filter and no job-level if:, green on every pull request since, Dependabot #2 included. It runs on the self-hosted macOS runner (henrys-macbook-pro, which replaced kioku-ios-mac on 2026-11-27), so a pull request cannot merge while that machine is offline. pr-title / pr-title has reported green on #2 through #10 since its caller landed in #1. testflight.yml is still push-to-main and workflow_dispatch only."
   },
   "Misoto22/kioku": {
     "checks": [],

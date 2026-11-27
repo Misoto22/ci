@@ -1,0 +1,123 @@
+# Reusable: open a PR bumping AppleKit's `minorVersion` in `project.yml` when a newer minor release is tagged.
+#
+# Consumers call this on a weekly schedule or workflow_dispatch, passing APP_CLIENT_ID and APP_PRIVATE_KEY so the PR
+# is opened by the misoto22-release-bot App and triggers CI checks cleanly.
+
+name: Bump AppleKit (reusable)
+
+on:
+  workflow_call:
+    inputs:
+      app-client-id:
+        description: Client ID of the misoto22-release-bot GitHub App.
+        required: true
+        type: string
+      project-file:
+        description: Path to the XcodeGen project.yml containing the AppleKit package pin.
+        required: false
+        type: string
+        default: project.yml
+      target-branch:
+        description: Base branch for the bump pull request.
+        required: false
+        type: string
+        default: main
+      runs-on:
+        description: JSON array of runner labels, consumed with fromJSON.
+        required: false
+        type: string
+        default: '["ubuntu-latest"]'
+    secrets:
+      APP_PRIVATE_KEY:
+        description: Full PEM of the misoto22-release-bot private key.
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  bump-applekit:
+    runs-on: ${{ fromJSON(inputs.runs-on) }}
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Mint release bot token
+        id: app-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          app-id: ${{ inputs.app-client-id }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+          ref: ${{ inputs.target-branch }}
+
+      - name: Resolve latest AppleKit minor version
+        id: resolve
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          PROJECT_FILE: ${{ inputs.project-file }}
+        run: |
+          set -euo pipefail
+          latest_tag=$(gh release view --repo Misoto22/apple-kit --json tagName --jq '.tagName')
+          minor=$(python3 -c '
+          import re, sys
+          m = re.match(r"^v(\d+)\.(\d+)\.\d+$", sys.argv[1])
+          if not m:
+              raise SystemExit(f"unexpected tag {sys.argv[1]!r}")
+          print(f"{m.group(1)}.{m.group(2)}.0")
+          ' "$latest_tag")
+
+          changed=$(python3 -c '
+          import pathlib, re, sys
+          path = pathlib.Path(sys.argv[1])
+          target = sys.argv[2]
+          text = path.read_text(encoding="utf-8")
+          pattern = re.compile(
+              r"(AppleKit:\s*\n(?:\s+[^\n]+\n)*?\s+minorVersion:\s*)(\d+\.\d+\.\d+)"
+          )
+          match = pattern.search(text)
+          if not match:
+              raise SystemExit(f"AppleKit minorVersion not found in {path}")
+          current = match.group(2)
+          if current == target:
+              print("false")
+              sys.exit(0)
+          updated = pattern.sub(rf"\g<1>{target}", text, count=1)
+          path.write_text(updated, encoding="utf-8")
+          print("true")
+          ' "$PROJECT_FILE" "$minor")
+
+          {
+            echo "latest_tag=${latest_tag}"
+            echo "minor=${minor}"
+            echo "changed=${changed}"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Open pull request
+        if: steps.resolve.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          MINOR: ${{ steps.resolve.outputs.minor }}
+          LATEST_TAG: ${{ steps.resolve.outputs.latest_tag }}
+          TARGET_BRANCH: ${{ inputs.target-branch }}
+          PROJECT_FILE: ${{ inputs.project-file }}
+        run: |
+          set -euo pipefail
+          branch="chore(deps)/bump-applekit-${MINOR}"
+          git config user.name "misoto22-release-bot[bot]"
+          git config user.email "misoto22-release-bot[bot]@users.noreply.github.com"
+          git checkout -B "$branch"
+          git add "$PROJECT_FILE"
+          git commit -m "chore(deps): bump AppleKit minorVersion to ${MINOR}"
+          git push --force-with-lease origin "$branch"
+          if ! gh pr list --head "$branch" --base "$TARGET_BRANCH" --state open --json number --jq '.[0].number' | grep -q .; then
+            gh pr create \
+              --base "$TARGET_BRANCH" \
+              --head "$branch" \
+              --title "chore(deps): bump AppleKit minorVersion to ${MINOR}" \
+              --body "Updates \`AppleKit\` \`minorVersion\` in \`${PROJECT_FILE}\` to \`${MINOR}\` following \`Misoto22/apple-kit\` \`${LATEST_TAG}\`."
+          fi
